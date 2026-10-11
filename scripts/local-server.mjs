@@ -4,8 +4,8 @@ import {DatabaseSync} from "node:sqlite";
 import {readFileSync,writeFileSync,existsSync,mkdirSync,readdirSync,unlinkSync} from "node:fs";
 import {resolve,extname} from "node:path";
 import {randomBytes} from "node:crypto";
-import {handle,coordinates} from "../dist/local-service.mjs";
-const port=Number(process.env.PORT||3101),state=resolve(".local-state"),assets=resolve("dist/local");
+import {handle,coordinates} from "../.local-build/service.mjs";
+const port=Number(process.env.PORT||3101),state=resolve(".local-state"),assets=resolve(".local-build/client");
 mkdirSync(state+"/uploads",{recursive:true});
 const sqlite=new DatabaseSync(state+"/data.sqlite");sqlite.exec("PRAGMA journal_mode=WAL;CREATE TABLE IF NOT EXISTS _migrations(name TEXT PRIMARY KEY)");
 for(const f of readdirSync("drizzle").filter(x=>x.endsWith(".sql")).sort()){
