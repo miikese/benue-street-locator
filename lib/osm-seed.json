@@ -1,0 +1,39 @@
+[
+  {
+    "id": "osm-relation-3716096",
+    "kind": "place",
+    "status": "approved",
+    "data": {
+      "name": "Otukpo",
+      "aliases": "Oturkpo",
+      "description": "Central reference point for the Otukpo administrative area from OpenStreetMap. This is a locality reference, not a building address.",
+      "lat": 7.1912599,
+      "lng": 8.1328576,
+      "lga": "Otukpo",
+      "town": "Otukpo",
+      "category": "Landmark",
+      "source": "OpenStreetMap",
+      "sourceUrl": "https://www.openstreetmap.org/relation/3716096",
+      "verification": "OSM record \u00b7 not locally verified"
+    }
+  },
+  {
+    "id": "osm-way-343560014",
+    "kind": "place",
+    "status": "approved",
+    "data": {
+      "name": "Orokam Street",
+      "description": "Public map record from OpenStreetMap. Coordinates show the mapped road centre, not a street address.",
+      "lat": 7.175723754716981,
+      "lng": 8.130540483018867,
+      "lga": "Otukpo",
+      "town": "Otukpo",
+      "category": "Street",
+      "source": "OpenStreetMap",
+      "sourceUrl": "https://www.openstreetmap.org/way/343560014",
+      "verification": "OSM record \u00b7 not locally verified",
+      "aliases": "",
+      "address": ""
+    }
+  }
+]
