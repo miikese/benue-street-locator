@@ -60,6 +60,10 @@ with sync_playwright() as p:
  # Logout invalidates the development session.
  page.goto(base+"/signout-with-chatgpt?return_to=/")
  assert page.request.post(base+"/api/records",data={"kind":"place","data":{}}).status==401
+ # Exercise compact phones, tablets and desktop after the complete feature journey.
+ for width in [320,390,768,1440]:
+  page.set_viewport_size({"width":width,"height":844});page.goto(base)
+  assert page.evaluate("document.documentElement.scrollWidth<=window.innerWidth"),("Horizontal overflow",width)
  assert not errors,errors
  browser.close()
 print("PASS: search, sign-in, private submission, moderator approval, favorite, QR, cleanup, mobile navigation/overflow, sign-out. No browser errors.")

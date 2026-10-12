@@ -49,3 +49,13 @@ describe("directory search and public links",()=>{
   expect((await call("records","POST",{kind:"place",data:{...place,website:"https://example.com/public"}})).status).toBe(201);
  });
 });
+
+it("keeps approved places and own contributions visible through a large pending backlog",async()=>{
+ const approved=(await call("records","POST",{kind:"place",data:place})).body.id;
+ ctx.user=admin;await call("records/"+approved,"PATCH",{status:"approved",note:"Reviewed public place data for an isolated test."});ctx.user=user;
+ const own=(await call("records","POST",{kind:"place",data:place})).body.id;
+ await db.batch(Array.from({length:1001},(_,i)=>db.prepare("INSERT INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)").bind("pending-"+i,"place","other-user","pending",JSON.stringify(place),"2099-01-01","2099-01-01")));
+ const publicRows=(await call("records?kind=place")).body.records;
+ expect(publicRows.map((r:any)=>r.id)).toEqual([approved]);expect(publicRows[0]).not.toHaveProperty("owner");
+ expect((await call("records?mine=1")).body.records.map((r:any)=>r.id).sort()).toEqual([approved,own].sort());
+});

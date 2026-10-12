@@ -25,3 +25,18 @@ and anonymizes remaining audit actor references. Host backups have their own ret
 Potential follow-up hardening: server-side image sanitization; strict CSP compatible
 with the framework; moderation response/body redaction workflows; abuse escalation;
 formal backup/retention controls; smaller paging than the initial 1,000-record cap.
+
+## Dependency audit checkpoint
+
+This phase applies the tested runtime patch updates used by the other independent
+apps: Next.js 16.3.8, React/React DOM/React Server DOM 19.2.8, Vite 8.0.16 and
+patched sharp, source-map-js, image-size, undici and ws dependencies. Commit the
+independent lockfile and verify with a clean npm ci. Production and full-toolchain
+audit outcomes are recorded in PROGRESS.md. Development glob/parser dependencies
+remain a release-review task; do not imply a fully clean build toolchain.
+
+Verified on 12 October 2026: `npm audit --omit=dev` reports 0 findings.
+Full `npm audit` reports 19 findings: 11 high, 5 moderate and 3 low.
+Remaining chains include glob/brace parsing, Drizzle’s legacy esbuild loader,
+and framework build tooling. An automatic major downgrade is not an acceptable
+fix; a supported toolchain migration and separate compatibility review remain open.

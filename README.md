@@ -92,3 +92,11 @@ accurate LGA boundary polygons, multilingual content, full offline map regions,
 alternative/walking/cycling routes and voice navigation are future phases.
 A reviewed contribution is not automatically an official or independently
 verified government address. This is not an emergency dispatch service.
+
+## Isolated browser verification
+
+Set `APP_STATE_DIR` on the local runner to keep browser fixtures separate from
+your saved data. The default remains `.local-state`; existing records are preserved.
+For example, use `APP_STATE_DIR=/tmp/benue-street-locator-qa npm run local`,
+then run `python3 scripts/e2e.py` in another terminal. Use a fresh directory for
+each run. Browser checks include 320px, 390px, 768px and 1440px layouts.

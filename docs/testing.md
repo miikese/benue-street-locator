@@ -1,6 +1,6 @@
 # Executed validation
 
-- 16 Vitest unit/API tests pass against a real in-memory SQLite database using the
+- 20 Vitest unit/API tests pass against a real in-memory SQLite database using the
   committed migration. Coverage includes authentication, origin checks, validation,
   pending-record privacy, moderator-only approval, history, notifications,
   favorites, account deletion, rate limits, LGA filters and distance calculations.

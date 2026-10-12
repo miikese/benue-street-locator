@@ -28,3 +28,26 @@ the remaining geographic, verification, navigation and operational work.
 - Existing Sites URL is https://benue-street-locator.readyloom3.chatgpt.site.
   Access is restricted. Its existing version is separate from this GitHub change;
   do not interpret this checkpoint as confirmation of a new deployment.
+
+## 12 October 2026 — restart recovery verified
+
+- Last completed task: Completed the surviving dependency patches and SQL-scoped public/owner listings; the regression covers a 1,001-record pending backlog.
+- Current phase: tested recovery checkpoint, independent GitHub and Sites delivery.
+- Implemented recovery improvements: `APP_STATE_DIR` isolates browser fixtures
+  from saved local records; browser checks now assert 320/390/768/1440px layouts.
+- Latest verified source commit before this checkpoint: `a6dd94b4667b9403b02ee2833ca8d7cb97a1e6f2`.
+  The checkpoint commit is available with `git rev-parse HEAD`; the exact final
+  remote SHA/CI/deployment outcomes are recorded in the workspace recovery report.
+- Tests: 20/20 unit/API tests, strict TypeScript and authored-code ESLint
+  passed. Local and hosted Worker production builds passed. Browser journeys
+  passed with no JavaScript errors; screenshots were refreshed.
+- Dependency audit: runtime 0 findings; full toolchain 19 findings
+  (11 high, 5 moderate, 3 low). Benue also passed a clean `npm ci`.
+- Deployment: existing restricted Site confirmed successfully published at
+  `https://benue-street-locator.readyloom3.chatgpt.site`; this new checkpoint requires its
+  matching source push, saved version and terminal deployment verification.
+- Remaining features: see PRODUCT_PLAN.md; advanced scope is still in development.
+- Next recommended task: verify checkpoint delivery, then review supported
+  build-toolchain upgrades and the project's prioritized product roadmap.
+- Local opening: `python3 /home/student/portfolio-site/scripts/open-local-projects.py`
+  starts all four previews without resetting their normal local databases.

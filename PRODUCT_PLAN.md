@@ -41,7 +41,8 @@ API requests. Keep initial seed provenance separate from community verification.
 1. Field-review public directory sources, provide evidence criteria and duplicate
    candidate review; no claim of verified businesses yet.
 2. Apply corrections to source records with an auditable merge workflow.
-3. Move listing filters and pagination into SQL for larger directories.
+3. Add cursor pagination for larger directories. Privacy/owner/type filters now run
+   in SQL before the 1,000-record cap, preventing pending backlogs hiding places.
 4. Validate LGA polygons, accessible route evidence and local-language content.
 5. Choose a supported tile/routing provider and perform production identity,
    backup/restore and moderation-operations checks before broad public release.
@@ -51,3 +52,11 @@ Run unit/API rules against real SQLite, strict typechecking, lint, both producti
 builds and browser contribution/moderation/save/QR journeys on desktop/mobile.
 Ship and verify this repository before publishing its portfolio card. Status:
 working MVP, continuing development; advanced roadmap is not complete.
+
+## Dependency maintenance phase
+Apply tested patch releases without changing the product architecture. Audit
+production dependencies separately from the build/migration toolchain, record
+remaining advisories, and rebuild/retest browser workflows before GitHub and Sites
+delivery. Maintainer advisories include:
+https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j and
+https://github.com/lovell/sharp/security/advisories/GHSA-wq5f-xc86-pv6w.
