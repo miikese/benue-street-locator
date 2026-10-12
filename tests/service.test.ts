@@ -28,3 +28,24 @@ describe("map rules",()=>{
  it("calculates straight-line distance without inventing routes",()=>{expect(distance({lat:7,lng:8},{lat:7,lng:8})).toBe(0);expect(distance({lat:7,lng:8},{lat:7.01,lng:8})).toBeCloseTo(1.11,1);});
  it("requires explicit reopening of approved records",()=>{expect(canTransition("place","approved","rejected")).toBe(false);expect(canTransition("place","approved","under-review")).toBe(true);});
 });
+
+describe("directory search and public links",()=>{
+ const rows=[{data:{name:"Orokam Street",aliases:"Old Market Road",town:"Otukpo",lga:"Otukpo",category:"Street"}},{data:{name:"Café Junction",lga:"Makurdi",category:"Market"}}];
+ it("tolerates one typo while requiring every search term",()=>{
+  expect(matchPlaces(rows,"orokm otukpo")).toHaveLength(1);
+  expect(matchPlaces(rows,"market old")).toHaveLength(1);
+  expect(matchPlaces(rows,"orokm hospital")).toHaveLength(0);
+  expect(matchPlaces(rows,"orokm","Makurdi")).toHaveLength(0);
+  expect(matchPlaces(rows,"abc")).toHaveLength(0);
+ });
+ it("matches accents and preserves exact short-term discovery",()=>{
+  expect(matchPlaces(rows,"cafe")).toHaveLength(1);
+  expect(matchPlaces(rows,"oro")).toHaveLength(1);
+  expect(matchPlaces(rows,"")).toHaveLength(2);
+ });
+ it("rejects malformed and credential-bearing public URLs",async()=>{
+  for(const website of ["https://", "https://user:password@example.com", "https://example.com/a b"])
+   expect((await call("records","POST",{kind:"place",data:{...place,website}})).status).toBe(400);
+  expect((await call("records","POST",{kind:"place",data:{...place,website:"https://example.com/public"}})).status).toBe(201);
+ });
+});
