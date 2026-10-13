@@ -24,7 +24,7 @@ export function validate(kind:string,d:Record<string,unknown>) {
   try {url=new URL(website);} catch {throw new Error("Website must be a valid HTTPS URL.");}
   if(url.protocol!=="https:" || !url.hostname || url.username || url.password || /\s/.test(website)) throw new Error("Website must be a public HTTPS URL without credentials.");
  }
- return {name,description,...c,lga:d.lga,category:d.category,town:text(d.town||d.lga,"Town",2,100),address:String(d.address||"").slice(0,200),aliases:String(d.aliases||"").slice(0,300),hours:String(d.hours||"").slice(0,200),phone:String(d.phone||"").slice(0,50),website,photo:String(d.photo||""),source:"Community submission",verification:"Community reviewed",private:false};
+ return {name,description,...c,target:kind==="correction"?String(d.target||"").slice(0,100):"",lga:d.lga,category:d.category,town:text(d.town||d.lga,"Town",2,100),address:String(d.address||"").slice(0,200),aliases:String(d.aliases||"").slice(0,300),hours:String(d.hours||"").slice(0,200),phone:String(d.phone||"").slice(0,50),website,photo:String(d.photo||""),source:"Community submission",verification:"Community reviewed",private:false};
 }
 export function canTransition(_kind:string,from:string,to:string) {
  return ({pending:["under-review","approved","rejected"],"under-review":["approved","rejected"],approved:["under-review"],rejected:["under-review"]} as Record<string,string[]>)[from]?.includes(to) || false;

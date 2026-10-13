@@ -13,7 +13,7 @@ export async function geocode(
     );
   const cached = await db
     .prepare("SELECT data FROM geocode_cache WHERE query=? AND expires>?")
-    .bind(q.toLowerCase(), Date.now())
+    .bind("v2:" + q.toLowerCase(), Date.now())
     .first();
   if (cached) return JSON.parse(cached.data);
   const key = "geocode:" + Math.floor(Date.now() / 1000),
@@ -31,7 +31,7 @@ export async function geocode(
   const url = new URL(endpoint);
   url.searchParams.set("q", q);
   url.searchParams.set("bbox", "7.2,6.3,10.1,8.6");
-  url.searchParams.set("limit", "8");
+  url.searchParams.set("limit", "20");
   url.searchParams.set("lang", "en");
   let response: Response;
   try {
@@ -64,7 +64,7 @@ export async function geocode(
       coordinates(lat, lng);
       const p = feature.properties;
       if (p.countrycode && p.countrycode.toLowerCase() !== "ng") return [];
-      if (p.state && p.state.toLowerCase() !== "benue") return [];
+      if (p.state && !/^benue(?: state)?$/i.test(p.state.trim())) return [];
       const address = [p.housenumber, p.street, p.district, p.city, p.state]
           .filter(Boolean)
           .join(", "),
@@ -103,13 +103,18 @@ export async function geocode(
   });
   const result = {
     results,
+    checkedAt: new Date().toISOString(),
     attribution: "© OpenStreetMap contributors · Photon",
   };
   await db
     .prepare(
       "INSERT INTO geocode_cache(query,data,expires) VALUES(?,?,?) ON CONFLICT(query) DO UPDATE SET data=excluded.data,expires=excluded.expires",
     )
-    .bind(q.toLowerCase(), JSON.stringify(result), Date.now() + 86400000)
+    .bind(
+      "v2:" + q.toLowerCase(),
+      JSON.stringify(result),
+      Date.now() + 86400000,
+    )
     .run();
   await db
     .prepare("DELETE FROM geocode_cache WHERE expires<?")

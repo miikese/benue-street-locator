@@ -1,7 +1,10 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { handle, json } from "../../../lib/service";
-import seed from "../../../lib/osm-seed.json";
+import osmSeed from "../../../lib/osm-seed.json";
+import directorySeed from "../../../lib/directory-seed.json";
+const seed=[...osmSeed,...directorySeed];
+import {worldCoordinates} from "../../../lib/navigation";
 import {coordinates} from "../../../lib/domain";
 async function route(req:Request) {
  if(!env.DB)return json({error:"Database unavailable."},503);
@@ -12,7 +15,7 @@ async function route(req:Request) {
    const key="routing:"+Math.floor(Date.now()/60000),limit=await env.DB.prepare("INSERT INTO limits(id,count) VALUES(?,1) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count").bind(key).first<{count:number}>();
    if((limit?.count||0)>10)return json({error:"Routing is busy. Try again in a minute."},429);
    const u=new URL(req.url),f=(u.searchParams.get("from")||"").split(",").map(Number),t=(u.searchParams.get("to")||"").split(",").map(Number);
-   coordinates(f[0],f[1]);coordinates(t[0],t[1]);
+   worldCoordinates(f[0],f[1]);coordinates(t[0],t[1]);
    const response=await fetch(base.replace(/\/$/,"")+"/route/v1/driving/"+f[1]+","+f[0]+";"+t[1]+","+t[0]+"?overview=full&geometries=geojson&steps=true",{signal:AbortSignal.timeout(12000)});
    const d=await response.json() as any;if(!response.ok||d.code!=="Ok"||!d.routes?.length)return json({error:"No route was found. Check the coordinates or use Open directions."},503);
    const r=d.routes[0];return json({distance:r.distance,duration:r.duration,geometry:r.geometry,steps:r.legs.flatMap((l:any)=>l.steps)});

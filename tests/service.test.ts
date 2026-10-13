@@ -59,3 +59,5 @@ it("keeps approved places and own contributions visible through a large pending 
  expect(publicRows.map((r:any)=>r.id)).toEqual([approved]);expect(publicRows[0]).not.toHaveProperty("owner");
  expect((await call("records?mine=1")).body.records.map((r:any)=>r.id).sort()).toEqual([approved,own].sort());
 });
+
+it("applies a reviewed correction to the original public place",async()=>{ctx.user=admin;const original=await call("records","POST",{kind:"place",data:place});await call("records/"+original.body.id,"PATCH",{status:"approved",note:"Reviewed original automated map fixture."});ctx.user=user;const fix=await call("records","POST",{kind:"correction",data:{...place,name:"Updated public school",lat:7.2,lng:8.14,target:original.body.id}});ctx.user=admin;expect((await call("records/"+fix.body.id,"PATCH",{status:"approved",note:"Reviewed coordinate evidence for the test correction."})).status).toBe(200);const updated=await call("records/"+original.body.id);expect(updated.body.record.data.lat).toBe(7.2);expect(updated.body.record.data.name).toBe("Updated public school");});

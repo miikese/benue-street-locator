@@ -1,0 +1,18 @@
+"""Opt-in GPS, changing position, real routing response contract and cleanup."""
+import os,json
+from playwright.sync_api import sync_playwright
+base=os.environ.get('APP_URL','http://127.0.0.1:3101')
+with sync_playwright() as p:
+ browser=p.chromium.launch(headless=True,executable_path=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE'),args=['--no-sandbox'])
+ context=browser.new_context(viewport={'width':1440,'height':1000});context.add_init_script("window.gpsCleared=0;Object.defineProperty(navigator,'geolocation',{value:{watchPosition(success,error){window.gpsSuccess=success;setTimeout(()=>success({coords:{latitude:7.192,longitude:8.132,accuracy:10},timestamp:Date.now()}),0);return 1},clearWatch(){window.gpsSuccess=null;window.gpsCleared++}}})");page=context.new_page();errors=[];calls=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ def directions(route):
+  calls.append(route.request.url)
+  route.fulfill(status=200,content_type='application/json',body=json.dumps({'distance':2400,'duration':360,'geometry':{'coordinates':[[8.132,7.192],[8.139,7.198]]},'steps':[{'maneuver':{'type':'continue'},'name':'QA route contract fixture','distance':2400}]}))
+ page.route('**/api/directions?*',directions);page.goto(base+'/?section=navigation');page.get_by_role('heading',name='Know where you are. See the way ahead.',exact=True).wait_for();assert not calls
+ page.get_by_role('button',name='Start live location',exact=True).click();page.get_by_text('7.192000, 8.132000',exact=True).wait_for();page.get_by_label('Or enter destination coordinates',exact=True).fill('7.198, 8.139');page.get_by_role('button',name='Use destination coordinates',exact=True).click();page.get_by_role('button',name='Start driving navigation',exact=True).click();page.get_by_text('6 min',exact=True).wait_for();assert calls
+ page.evaluate("gpsSuccess({coords:{latitude:7.194,longitude:8.135,accuracy:10},timestamp:Date.now()})");page.get_by_text('7.194000, 8.135000',exact=True).wait_for()
+ page.get_by_role('button',name='Stop live location',exact=True).click();page.get_by_text('Location paused',exact=True).wait_for()
+ for width in [320,390,768]:page.set_viewport_size({'width':width,'height':844});page.wait_for_timeout(250);assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
+ assert page.evaluate("localStorage.getItem('benue-journeys-v1')")==None,'GPS must not save private journeys automatically'
+ denied=browser.new_page();denied.add_init_script("Object.defineProperty(navigator,'geolocation',{value:{watchPosition(success,error){setTimeout(()=>error({code:1}),0);return 1},clearWatch(){}}})");denied.goto(base+'/?section=navigation');denied.get_by_role('button',name='Start live location',exact=True).click();denied.get_by_text('Location permission was declined.',exact=False).wait_for();assert denied.get_by_text('Location paused',exact=True).count()
+ assert not errors,errors;browser.close();print('PASS: opt-in GPS, live updates, destination selection, route contract/time/distance, stop tracking, permission-denied state, no automatic journey storage and mobile layouts')

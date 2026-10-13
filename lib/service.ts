@@ -70,6 +70,7 @@ export async function handle(req:Request,ctx:Context):Promise<Response> {
   }
   if(path==="records" && req.method==="POST") {
    const u=signed(),d=await body(req),kind=String(d.kind),data=domain.validate(kind,d.data||{}),record=id(),status=domain.initialStatus(kind);
+   if(kind==="correction"&&data.target&&!await stmt("SELECT id FROM records WHERE id=? AND kind='place' AND status='approved'",String(data.target)).first())error("Choose an existing public place to correct.",404);
    if(data.photo && !await stmt("SELECT id FROM uploads WHERE id=? AND owner=?",String(data.photo),u.userId).first())error("Invalid photo.");
    await db.batch([
     stmt("INSERT INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)",record,kind,u.userId,status,JSON.stringify(data),now,now),
@@ -91,12 +92,15 @@ export async function handle(req:Request,ctx:Context):Promise<Response> {
    if(req.method==="PATCH") {
     const u=await admin(),d=await body(req),status=String(d.status),note=domain.text(d.note,"Review note",10,1200);
     if(!domain.canTransition(row.kind,row.status,status))error("This status transition is not allowed.",409);
+    const correction=JSON.parse(row.data),target= row.kind==="correction"&&status==="approved"&&correction.target?await stmt("SELECT data FROM records WHERE id=? AND kind='place' AND status='approved'",correction.target).first():null;
+    if(row.kind==="correction"&&status==="approved"&&correction.target&&!target)error("The original place is no longer available.",409);
     const r=await stmt("UPDATE records SET status=?,updated=? WHERE id=? AND status=? RETURNING id",status,now,record,row.status).first();
     if(!r)error("The record changed. Refresh before reviewing.",409);
     await db.batch([
       stmt("INSERT INTO audit(id,record,actor,status,note,created) VALUES(?,?,?,?,?,?)",id(),record,u.userId,status,note,now),
       stmt("INSERT INTO notifications(id,owner,message,created) VALUES(?,?,?,?)",id(),row.owner,"Your "+row.kind+" is now "+status+": "+note,now)
     ]);
+    if(target){const previous=JSON.parse(target.data);const updated={...previous,...correction,aliases:correction.aliases||previous.aliases,source:"Community reviewed correction",sourceUrl:previous.sourceUrl,verification:"Community reviewed"};await db.batch([stmt("UPDATE records SET data=?,updated=? WHERE id=?",JSON.stringify(updated),now,correction.target),stmt("INSERT INTO audit(id,record,actor,status,note,created) VALUES(?,?,?,?,?,?)",id(),correction.target,u.userId,"approved","Applied reviewed location correction: "+note,now)]);}
     const followers=await all("SELECT DISTINCT owner FROM actions WHERE record=? AND type='follow'",record);
     if(followers.length)await db.batch(followers.map((f:any)=>stmt("INSERT INTO notifications(id,owner,message,created) VALUES(?,?,?,?)",id(),f.owner,"An issue you follow is now "+status+": "+note,now)));
     return json({status});

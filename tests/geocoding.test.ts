@@ -27,6 +27,8 @@ it("bounds address lookup and caches repeated queries", async () => {
   expect(new URL(String(f.mock.calls[0][0])).searchParams.get("bbox")).toBe(
     "7.2,6.3,10.1,8.6",
   );
+  expect(new Date(first.checkedAt).getTime()).toBeGreaterThan(0);
+  expect(new URL(String(f.mock.calls[0][0])).searchParams.get("limit")).toBe("20");
   await geocode("otukpo", db, undefined, f);
   expect(f).toHaveBeenCalledTimes(1);
 });
@@ -54,3 +56,5 @@ it("limits concurrent uncached searches across the app", async () => {
   expect(outcomes.filter((r) => r.status === "fulfilled")).toHaveLength(1);
   expect(f).toHaveBeenCalledTimes(1);
 });
+
+it("accepts Benue State metadata and excludes neighbouring states",async()=>{const a=feature(),b=feature();a.properties.state="Benue State";b.properties.state="Kogi";const result=await geocode("Public landmark",db,undefined,async()=>Response.json({features:[a,b]}));expect(result.results).toHaveLength(1);});

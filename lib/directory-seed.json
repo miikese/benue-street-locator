@@ -1,0 +1,22 @@
+[
+  {
+    "id": "directory-st-helen-otukpo",
+    "kind": "place",
+    "status": "approved",
+    "data": {
+      "name": "St Helen Specialist Hospital",
+      "aliases": "St Helens Saint Helen St Helen's StHelens hospital",
+      "category": "Hospital",
+      "lga": "Otukpo",
+      "town": "Otukpo",
+      "address": "New Otobo Road, off Burnt Bricks Road, Asa 2, Otukpo",
+      "description": "A public provider directory lists this hospital and address. The exact map pin has not been confirmed. Check the source and confirm the address before travelling; current services and opening hours are not established by this listing.",
+      "lat": null,
+      "lng": null,
+      "source": "Public provider directory",
+      "sourceUrl": "https://crownjewelhmo.com/providers/",
+      "sourceCheckedAt": "2026-10-13",
+      "verification": "Sourced address; map pin not confirmed"
+    }
+  }
+]

@@ -104,3 +104,13 @@ each run. Browser checks include 320px, 390px, 768px and 1440px layouts.
 ## Address lookup and My journeys
 
 Use **Search wider map for this address** for sourced public street/address references. Add any place or private pin to **My journeys**, with planned/visited status, dates, private notes, stop order and JSON export. All journey data stays on this device. See [provider setup, privacy and checks](docs/journeys.md).
+
+## Live navigation and wider search
+
+Open **Live navigation** to opt into live device GPS, see your current marker and accuracy radius, select a place/planned stop/address/map pin, and start driving navigation. Road distance, estimated driving time, arrival time and route steps come from OSRM; they refresh from your latest GPS fix every 45 seconds. You can stop location tracking or disable map following. Tracking stops when the screen closes and never automatically saves a journey or shares location with other accounts. Starting a route sends coordinates to the routing provider. GPS permission, a secure browser context (HTTPS or localhost) and network access are needed. Traffic, closures, vehicle restrictions and full voice guidance are not provided.
+
+A submitted place search now checks the wider Photon map automatically. It returns up to 20 references, recognises both “Benue” and “Benue State” metadata, and shows the lookup date. The homepage shows today's date in the Benue time zone. Lookup date is retrieval time, not verification that every business/street is current. Map coverage is incomplete; missing places can be submitted through Add a place, or located using a public landmark or coordinate pin.
+
+Tests include the live GPS/routing browser contract in `scripts/navigation-check.py`, worldwide device-position validation, arrival arithmetic and wider-search metadata. The browser test uses explicit mocked GPS/routing fixtures; actual local OSRM routing is checked separately when the external service is available.
+
+St Helen Specialist Hospital is included as a sourced public address from Crown Jewel HMO’s provider directory, checked on 13 October 2026. Its exact map pin is not confirmed, so the app shows the address/source but disables coordinate-based routing and journey tracking for that listing. No hospital coordinates, opening hours or services are invented. A reviewed correction can update the original listing once real pin evidence is supplied.
