@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS geocode_cache (query TEXT PRIMARY KEY, data TEXT NOT NULL, expires INTEGER NOT NULL);

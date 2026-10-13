@@ -9,3 +9,5 @@ export const audit = sqliteTable("audit", {id:text("id").primaryKey(),record:tex
 export const notifications = sqliteTable("notifications", {id:text("id").primaryKey(),owner:text("owner").notNull(),message:text("message").notNull(),read:integer("read").notNull().default(0),created:text("created").notNull()});
 export const uploads = sqliteTable("uploads", {id:text("id").primaryKey(),owner:text("owner").notNull(),mime:text("mime").notNull(),created:text("created").notNull()});
 export const limits = sqliteTable("limits", {id:text("id").primaryKey(),count:integer("count").notNull()});
+
+export const geocodeCache=sqliteTable("geocode_cache",{query:text("query").primaryKey(),data:text("data").notNull(),expires:integer("expires").notNull()});

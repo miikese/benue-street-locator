@@ -100,3 +100,7 @@ your saved data. The default remains `.local-state`; existing records are preser
 For example, use `APP_STATE_DIR=/tmp/benue-street-locator-qa npm run local`,
 then run `python3 scripts/e2e.py` in another terminal. Use a fresh directory for
 each run. Browser checks include 320px, 390px, 768px and 1440px layouts.
+
+## Address lookup and My journeys
+
+Use **Search wider map for this address** for sourced public street/address references. Add any place or private pin to **My journeys**, with planned/visited status, dates, private notes, stop order and JSON export. All journey data stays on this device. See [provider setup, privacy and checks](docs/journeys.md).

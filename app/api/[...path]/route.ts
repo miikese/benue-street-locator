@@ -22,6 +22,6 @@ async function route(req:Request) {
   return handle(req,{db:env.DB,user:{userId:"deployment-seed",displayName:"Deployment seed"},adminIds:["deployment-seed"],seed});
  }
  const ids=((env as unknown as {ADMIN_USER_IDS?:string}).ADMIN_USER_IDS||"").split(",").map(s=>s.trim()).filter(Boolean);
- return handle(req,{db:env.DB,user:await getChatGPTUser(),adminIds:ids,adminEmails:((env as unknown as {ADMIN_EMAILS?:string}).ADMIN_EMAILS||"").toLowerCase().split(",").map(s=>s.trim()).filter(Boolean),bucket:env.BUCKET,seed});
+ return handle(req,{db:env.DB,user:await getChatGPTUser(),adminIds:ids,adminEmails:((env as unknown as {ADMIN_EMAILS?:string}).ADMIN_EMAILS||"").toLowerCase().split(",").map(s=>s.trim()).filter(Boolean),bucket:env.BUCKET,geocodeUrl:(env as unknown as {GEOCODING_URL?:string}).GEOCODING_URL,seed});
 }
 export const GET=route,POST=route,PATCH=route,DELETE=route;
