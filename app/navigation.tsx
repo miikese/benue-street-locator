@@ -11,12 +11,13 @@ import {
 import { PlaceMap } from "./map";
 import { Notice } from "./components";
 import { api, type RecordItem } from "../lib/client";
-import { coordinates } from "../lib/domain";
+import { coordinates, distance } from "../lib/domain";
 import {
   worldCoordinates,
   arrivalTime,
   type LivePoint,
 } from "../lib/navigation";
+import type { NearestRoad } from "../lib/nearest-road";
 import { journeyRecord } from "./journeys";
 import type { JourneyPlace } from "../lib/journeys";
 export function LiveNavigation({
@@ -30,7 +31,7 @@ export function LiveNavigation({
 }) {
   const [point, setPoint] = useState<LivePoint | null>(null),
     [tracking, setTracking] = useState(false),
-    [gpsProblem,setGpsProblem]=useState(""),
+    [gpsProblem, setGpsProblem] = useState(""),
     [destination, setDestination] = useState<RecordItem | null>(
       initialDestination,
     ),
@@ -44,6 +45,9 @@ export function LiveNavigation({
     [searching, setSearching] = useState(false),
     [matches, setMatches] = useState<RecordItem[]>([]),
     [manual, setManual] = useState("");
+  const [road, setRoad] = useState<NearestRoad | null>(null),
+    [roadBusy, setRoadBusy] = useState(false),
+    [roadError, setRoadError] = useState("");
   const watch = useRef<number | null>(null),
     pointRef = useRef<LivePoint | null>(null);
   const stop = useCallback(() => {
@@ -69,7 +73,9 @@ export function LiveNavigation({
       return;
     }
     setMessage("");
-    setGpsProblem("");setPoint(null);pointRef.current=null;
+    setGpsProblem("");
+    setPoint(null);
+    pointRef.current = null;
     setTracking(true);
     setFollow(true);
     watch.current = navigator.geolocation.watchPosition(
@@ -84,7 +90,8 @@ export function LiveNavigation({
           };
           pointRef.current = next;
           setPoint(next);
-          setMessage("");setGpsProblem("");
+          setMessage("");
+          setGpsProblem("");
         } catch {
           setMessage(
             "Your device returned an invalid position. Please try again.",
@@ -99,11 +106,49 @@ export function LiveNavigation({
               ? "Your device timed out while finding a position. Move to a clearer area and retry."
               : "Your device cannot determine its location right now. Check that location services are enabled.",
         );
-        setGpsProblem("Waiting for a fresh GPS signal");if(e.code===1)stop();
+        setGpsProblem("Waiting for a fresh GPS signal");
+        if (e.code === 1) stop();
       },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
     );
   };
+  const hasPoint = !!point;
+  useEffect(() => {
+    if (!tracking || !hasPoint) return;
+    let disposed = false,
+      pending = false;
+    const controller = new AbortController();
+    const refresh = async () => {
+      const current = pointRef.current;
+      if (pending || !current || disposed) return;
+      pending = true;
+      setRoadBusy(true);
+      setRoad(null);
+      setRoadError("");
+      try {
+        const response = await fetch(
+          "/api/nearest-road?lat=" + current.lat + "&lng=" + current.lng,
+          { signal: controller.signal },
+        );
+        const data = (await response.json()) as any;
+        if (!response.ok)
+          throw new Error(data.error || "Street lookup is unavailable.");
+        if (!disposed) setRoad(data);
+      } catch (e) {
+        if (!disposed) setRoadError((e as Error).message);
+      } finally {
+        pending = false;
+        if (!disposed) setRoadBusy(false);
+      }
+    };
+    void refresh();
+    const timer = setInterval(refresh, 15000);
+    return () => {
+      disposed = true;
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [tracking, hasPoint]);
   const choose = useCallback((r: RecordItem) => {
     setDestination(r);
     setNavigating(false);
@@ -157,7 +202,7 @@ export function LiveNavigation({
             destination.data.lng,
           { signal: controller.signal },
         );
-        const d:any = await response.json();
+        const d: any = await response.json();
         if (!response.ok)
           throw new Error(d.error || "Driving directions are unavailable.");
         if (
@@ -200,7 +245,12 @@ export function LiveNavigation({
     ...journeys.filter((j) => j.status === "planned").map(journeyRecord),
     ...matches,
     ...(destination ? [destination] : []),
-  ].filter((r, i, rows) => rows.findIndex((p) => p.id === r.id) === i && typeof r.data.lat==="number" && typeof r.data.lng==="number");
+  ].filter(
+    (r, i, rows) =>
+      rows.findIndex((p) => p.id === r.id) === i &&
+      typeof r.data.lat === "number" &&
+      typeof r.data.lng === "number",
+  );
   return (
     <section className="section live-navigation">
       <p className="eyebrow">Your position. Your next destination.</p>
@@ -216,12 +266,18 @@ export function LiveNavigation({
             map.
           </p>
         </div>
-        <span className={"live-status " + (tracking && point && !gpsProblem ? "active" : "")}>
+        <span
+          className={
+            "live-status " + (tracking && point && !gpsProblem ? "active" : "")
+          }
+        >
           <i />
           {tracking
-            ? gpsProblem?"Waiting for GPS signal":point
-              ? "Live location on"
-              : "Waiting for GPS…"
+            ? gpsProblem
+              ? "Waiting for GPS signal"
+              : point
+                ? "Live location on"
+                : "Waiting for GPS…"
             : "Location paused"}
         </span>
       </div>
@@ -233,8 +289,10 @@ export function LiveNavigation({
               <h2>Your current location.</h2>
             </div>
             <p className="muted">
-              Turn on location to follow your position. Your browser will ask
-              for permission.
+              Turn on high-accuracy location to follow your position and
+              identify the nearest mapped street. This shares your coordinates
+              with the street provider; your browser will ask for location
+              permission.
             </p>
             <div className="button-row">
               {tracking ? (
@@ -263,6 +321,52 @@ export function LiveNavigation({
                     map.
                   </small>
                 )}
+                <div className="nearest-street" aria-live="polite">
+                  <small>Nearest mapped street</small>
+                  {roadBusy ? (
+                    <p>Finding the nearest street…</p>
+                  ) : road ? (
+                    <>
+                      <strong>{road.name}</strong>
+                      <p>
+                        {Math.round(distance(point, road) * 1000)} m from your
+                        reported position · straight-line distance
+                      </p>
+                      <small>
+                        {road.named
+                          ? "Mapped road name"
+                          : "This road has no recorded name"}
+                        . Based on the driving-road network; GPS accuracy may
+                        place you on a different nearby street.
+                      </small>
+                      <small>
+                        Street lookup at{" "}
+                        {new Date(road.checkedAt).toLocaleTimeString()}
+                      </small>
+                    </>
+                  ) : (
+                    <p>
+                      {roadError ||
+                        "Start live location to look up the nearest street."}
+                    </p>
+                  )}
+                </div>
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard
+                      .writeText(point.lat + ", " + point.lng)
+                      .then(() => setMessage("GPS coordinates copied."))
+                      .catch(() =>
+                        setMessage(
+                          "Select the coordinates above to copy them.",
+                        ),
+                      )
+                  }
+                >
+                  Copy my coordinates
+                </button>
                 <label className="live-follow">
                   <input
                     type="checkbox"
@@ -466,6 +570,8 @@ export function LiveNavigation({
             route={route?.geometry?.coordinates}
             onPin={pin}
             livePoint={point}
+            nearestRoad={tracking ? road : null}
+            liveTracking={tracking}
             followLocation={tracking && follow}
           />
           <div className="navigation-privacy-note">

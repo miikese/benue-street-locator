@@ -114,3 +114,9 @@ A submitted place search now checks the wider Photon map automatically. It retur
 Tests include the live GPS/routing browser contract in `scripts/navigation-check.py`, worldwide device-position validation, arrival arithmetic and wider-search metadata. The browser test uses explicit mocked GPS/routing fixtures; actual local OSRM routing is checked separately when the external service is available.
 
 St Helen Specialist Hospital is included as a sourced public address from Crown Jewel HMO’s provider directory, checked on 13 October 2026. Its exact map pin is not confirmed, so the app shows the address/source but disables coordinate-based routing and journey tracking for that listing. No hospital coordinates, opening hours or services are invented. A reviewed correction can update the original listing once real pin evidence is supplied.
+
+## Current position, nearest street and satellite view
+
+Live navigation shows your reported GPS coordinates, accuracy in metres and a separate nearest-road marker. **Centre on me** zooms to your current position; **Copy coordinates** copies the current fix. Street lookup refreshes every 15 seconds from the current GPS position using the OSRM driving network. An unnamed road stays labelled as unnamed; road coverage and GPS accuracy determine how closely the street match represents your position. Coordinates are shared only with the configured routing provider while this opt-in screen is tracking, and are not recorded in the database.
+
+Every map has **Normal / Satellite** controls. Satellite uses Esri World Imagery; imagery capture dates vary by location and the imagery is not a live satellite feed. Your GPS marker continues updating over either map view. The map-view preference is saved on this device. Network access is required for tiles; no offline satellite tiles are downloaded.

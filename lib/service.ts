@@ -1,10 +1,11 @@
+import {nearestRoad} from "./nearest-road";
 import {geocode} from "./geocoding";
 import * as domain from "./domain";
 export type Identity = {userId:string;displayName:string;email?:string}|null;
 export type Stored = {id:string;kind:string;owner:string;status:string;data:string;created:string;updated:string};
 type BindValue = string|number|null;
 export type DB = {prepare(sql:string):{bind(...values:BindValue[]):any;first<T=any>():Promise<T|null>;all<T=any>():Promise<{results:T[]}>;run():Promise<any>};batch(statements:any[]):Promise<any>};
-export type Context = {db:DB;user:Identity;adminIds:string[];adminEmails?:string[];bucket?:R2Bucket;geocodeUrl?:string;seed?:{id:string;kind:string;status:string;data:Record<string,unknown>}[]};
+export type Context = {db:DB;user:Identity;adminIds:string[];adminEmails?:string[];bucket?:R2Bucket;geocodeUrl?:string;routingUrl?:string;seed?:{id:string;kind:string;status:string;data:Record<string,unknown>}[]};
 export function json(value:unknown,status=200) {
  return new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin"}});
 }
@@ -32,6 +33,10 @@ export async function handle(req:Request,ctx:Context):Promise<Response> {
  const signed=()=>{if(!user)error("Sign in to continue.",401);return user!;};
  const admin=async()=>{const u=signed();const r=await stmt("SELECT role FROM users WHERE id=?",u.userId).first();if(!ctx.adminIds.includes(u.userId)&&!(u.email&&ctx.adminEmails?.includes(u.email.toLowerCase()))&&r?.role!=="admin"&&r?.role!=="moderator")error("Moderator access required.",403);return u;};
  try {
+  if(path==="nearest-road"&&req.method==="GET"){
+   const lat=url.searchParams.get("lat"),lng=url.searchParams.get("lng");if(lat===null||lng===null||!lat.trim()||!lng.trim())error("Latitude and longitude are required.");
+   return json(await nearestRoad(Number(lat),Number(lng),db,ctx.routingUrl));
+  }
   if(path==="geocode" && req.method==="GET")return json(await geocode(url.searchParams.get("q")||"",db,ctx.geocodeUrl));
   if(req.method!=="GET" && req.method!=="HEAD") {
    const origin=req.headers.get("origin");
