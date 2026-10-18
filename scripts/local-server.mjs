@@ -1,3 +1,4 @@
+import {loadEnvFile} from "node:process";
 // Loopback-only companion runner. Hosted authentication remains dispatch-owned.
 import {createServer} from "node:http";
 import {DatabaseSync} from "node:sqlite";
@@ -5,6 +6,7 @@ import {readFileSync,writeFileSync,existsSync,mkdirSync,readdirSync,unlinkSync} 
 import {resolve,extname} from "node:path";
 import {randomBytes} from "node:crypto";
 import {handle,coordinates,worldCoordinates} from "../.local-build/service.mjs";
+try{loadEnvFile(".env.local")}catch(e){if(e.code!=="ENOENT")throw e}
 const port=Number(process.env.PORT||3101),state=resolve(process.env.APP_STATE_DIR||".local-state"),assets=resolve(".local-build/client");
 mkdirSync(state+"/uploads",{recursive:true});
 const sqlite=new DatabaseSync(state+"/data.sqlite");sqlite.exec("PRAGMA journal_mode=WAL;CREATE TABLE IF NOT EXISTS _migrations(name TEXT PRIMARY KEY)");
@@ -42,7 +44,7 @@ createServer(async(req,res)=>{
      const d=await r.json();if(!r.ok||d.code!=="Ok"||!d.routes?.length)throw new Error("No route found");
      const route=d.routes[0];response=Response.json({distance:route.distance,duration:route.duration,geometry:route.geometry,steps:route.legs.flatMap(l=>l.steps)});
     }catch{response=Response.json({error:"Routing is unavailable. Use Open directions to view a supported provider."},{status:503});}
-   }else response=await handle(request,{db,user,adminIds:["local_seedy"],bucket,geocodeUrl:process.env.GEOCODING_URL,routingUrl:process.env.ROUTING_URL});
+   }else response=await handle(request,{db,user,ownerEmail:process.env.OWNER_EMAIL,ownerPasswordHash:process.env.OWNER_PASSWORD_HASH,adminIds:["local_seedy"],bucket,geocodeUrl:process.env.GEOCODING_URL,routingUrl:process.env.ROUTING_URL});
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;
   }
   const file=resolve(assets,"."+decodeURIComponent(u.pathname));

@@ -15,6 +15,13 @@
       "when": 1791882000000,
       "tag": "0001_geocode_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792310869689,
+      "tag": "0002_lethal_hardball",
+      "breakpoints": true
     }
   ]
 }

@@ -11,3 +11,5 @@ export const uploads = sqliteTable("uploads", {id:text("id").primaryKey(),owner:
 export const limits = sqliteTable("limits", {id:text("id").primaryKey(),count:integer("count").notNull()});
 
 export const geocodeCache=sqliteTable("geocode_cache",{query:text("query").primaryKey(),data:text("data").notNull(),expires:integer("expires").notNull()});
+
+export const ownerSessions=sqliteTable("owner_sessions",{id:text("id").primaryKey(),email:text("email").notNull(),credentialDigest:text("credential_digest").notNull(),expires:integer("expires").notNull(),created:text("created").notNull()},t=>[index("owner_sessions_expiry").on(t.expires)]);

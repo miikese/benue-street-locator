@@ -1,11 +1,12 @@
+import {handleOwnerAuth,resolveOwnerSession,ownerIdentityId} from "./owner-auth";
 import {nearestRoad} from "./nearest-road";
 import {geocode} from "./geocoding";
 import * as domain from "./domain";
-export type Identity = {userId:string;displayName:string;email?:string}|null;
+export type Identity = {userId:string;displayName:string;email?:string;authMethod?:"owner-password"|"platform"}|null;
 export type Stored = {id:string;kind:string;owner:string;status:string;data:string;created:string;updated:string};
 type BindValue = string|number|null;
 export type DB = {prepare(sql:string):{bind(...values:BindValue[]):any;first<T=any>():Promise<T|null>;all<T=any>():Promise<{results:T[]}>;run():Promise<any>};batch(statements:any[]):Promise<any>};
-export type Context = {db:DB;user:Identity;adminIds:string[];adminEmails?:string[];bucket?:R2Bucket;geocodeUrl?:string;routingUrl?:string;seed?:{id:string;kind:string;status:string;data:Record<string,unknown>}[]};
+export type Context = {db:DB;user:Identity;adminIds:string[];adminEmails?:string[];ownerEmail?:string;ownerPasswordHash?:string;bucket?:R2Bucket;geocodeUrl?:string;routingUrl?:string;seed?:{id:string;kind:string;status:string;data:Record<string,unknown>}[]};
 export function json(value:unknown,status=200) {
  return new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin"}});
 }
@@ -26,6 +27,9 @@ export function serialize(row:Stored,privateView=false) {
  return {...safe,...(privateView?{owner}:{}),data:JSON.parse(row.data)};
 }
 export async function handle(req:Request,ctx:Context):Promise<Response> {
+ try{const auth=await handleOwnerAuth(req,ctx);if(auth)return auth;const owner=await resolveOwnerSession(req,ctx);return await handleRequest(req,{...ctx,...(owner?{user:owner,adminIds:[...ctx.adminIds,ownerIdentityId(ctx.ownerEmail!)]}:{})})}catch{return json({error:"Sign-in is temporarily unavailable."},503)}
+}
+async function handleRequest(req:Request,ctx:Context):Promise<Response> {
  const {db,user}=ctx,url=new URL(req.url),path=url.pathname.replace(/^\/api\/?/,""),now=new Date().toISOString();
  const id=()=>crypto.randomUUID();
  const stmt=(sql:string,...args:BindValue[])=>db.prepare(sql).bind(...args);
