@@ -39,7 +39,7 @@ export async function handleOwnerAuth(req:Request,ctx:Context):Promise<Response|
  await ctx.db.batch([
   ctx.db.prepare("DELETE FROM owner_sessions WHERE expires<=?").bind(Date.now()),
   ctx.db.prepare("INSERT INTO owner_sessions(id,email,credential_digest,expires,created) VALUES(?,?,?,?,?)").bind(digest(token),email,digest(ctx.ownerPasswordHash),Date.now()+SESSION_SECONDS*1000,now),
-  ctx.db.prepare("INSERT INTO users(id,name,role) VALUES(?,?,'admin') ON CONFLICT(id) DO UPDATE SET role='admin'").bind(id,"Benue Locator owner"),
+  ctx.db.prepare("INSERT INTO users(id,name,role) VALUES(?,?,'super_admin') ON CONFLICT(id) DO UPDATE SET role='super_admin'").bind(id,"Benue Locator owner"),
   ctx.db.prepare("DELETE FROM limits WHERE id=?").bind(bucket)
  ]);
  return Response.json({signedIn:true},{headers:{"set-cookie":cookie(token,SESSION_SECONDS),"cache-control":"no-store"}});

@@ -31,11 +31,12 @@ export async function handle(req:Request,ctx:Context):Promise<Response> {
 }
 async function handleRequest(req:Request,ctx:Context):Promise<Response> {
  const {db,user}=ctx,url=new URL(req.url),path=url.pathname.replace(/^\/api\/?/,""),now=new Date().toISOString();
+ const isOwner=!!(user?.authMethod==="owner-password" && ctx.ownerEmail && user.userId===ownerIdentityId(ctx.ownerEmail));
  const id=()=>crypto.randomUUID();
  const stmt=(sql:string,...args:BindValue[])=>db.prepare(sql).bind(...args);
  const all=async(sql:string,...args:BindValue[])=>(await stmt(sql,...args).all()).results;
  const signed=()=>{if(!user)error("Sign in to continue.",401);return user!;};
- const admin=async()=>{const u=signed();const r=await stmt("SELECT role FROM users WHERE id=?",u.userId).first();if(!ctx.adminIds.includes(u.userId)&&!(u.email&&ctx.adminEmails?.includes(u.email.toLowerCase()))&&r?.role!=="admin"&&r?.role!=="moderator")error("Moderator access required.",403);return u;};
+ const admin=async()=>{const u=signed();const r=await stmt("SELECT role FROM users WHERE id=?",u.userId).first();if(!ctx.adminIds.includes(u.userId)&&!(u.email&&ctx.adminEmails?.includes(u.email.toLowerCase()))&&r?.role!=="admin"&&r?.role!=="super_admin"&&r?.role!=="moderator")error("Moderator access required.",403);return u;};
  try {
   if(path==="nearest-road"&&req.method==="GET"){
    const lat=url.searchParams.get("lat"),lng=url.searchParams.get("lng");if(lat===null||lng===null||!lat.trim()||!lng.trim())error("Latitude and longitude are required.");
@@ -54,11 +55,17 @@ async function handleRequest(req:Request,ctx:Context):Promise<Response> {
   if(path==="seed" && req.method==="POST") {
    await admin();const seed=ctx.seed||[];if(seed.length)await db.batch(seed.map(r=>stmt("INSERT OR IGNORE INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)",r.id,r.kind,"osm-import",r.status,JSON.stringify(r.data),now,now)));return json({imported:seed.length});
   }
+  if(path==="admin/overview" && req.method==="GET") {
+   signed();if(!isOwner)error("Super-admin access required.",403);
+   const counts=await all("SELECT status,COUNT(*) AS total FROM records GROUP BY status");
+   const accounts=await stmt("SELECT COUNT(*) AS total FROM users").first();
+   return json({accounts:accounts.total,places:counts.reduce((sum:number,r:any)=>sum+r.total,0),pending:counts.filter((r:any)=>["under-review","awaiting-review"].includes(r.status)).reduce((sum:number,r:any)=>sum+r.total,0)});
+  }
   if(path==="me" && req.method==="GET") {
    if(!user)return json({user:null});
    await stmt("INSERT INTO users(id,name,role) VALUES(?,?,'member') ON CONFLICT(id) DO UPDATE SET name=excluded.name",user.userId,user.displayName).run();
    const u=await stmt("SELECT * FROM users WHERE id=?",user.userId).first();
-   return json({user:{id:user.userId,name:user.displayName,role:(ctx.adminIds.includes(user.userId)||(user.email&&ctx.adminEmails?.includes(user.email.toLowerCase())))?"admin":u.role},notifications:await all("SELECT * FROM notifications WHERE owner=? ORDER BY created DESC LIMIT 50",user.userId)});
+   return json({user:{id:user.userId,name:user.displayName,email:isOwner?user.email:undefined,role:isOwner?"super_admin":(ctx.adminIds.includes(user.userId)||(user.email&&ctx.adminEmails?.includes(user.email.toLowerCase())))?"admin":u.role},notifications:await all("SELECT * FROM notifications WHERE owner=? ORDER BY created DESC LIMIT 50",user.userId)});
   }
   if(path==="records" && req.method==="GET") {
    const kind=url.searchParams.get("kind")||"",mine=url.searchParams.get("mine")==="1",review=url.searchParams.get("review")==="1";

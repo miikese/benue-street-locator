@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import {LocateFixed, Maximize2, Minimize2, Copy, RefreshCw, Navigation, MapPin, Layers, Satellite, X} from "lucide-react";
+import {MAP_MAX_ZOOM, locationError} from "../lib/map-tiles";
+import {satelliteLayer} from "./satellite-layer";
 import type { LivePoint } from "../lib/navigation";
 import type { NearestRoad } from "../lib/nearest-road";
 import type { RecordItem } from "../lib/client";
@@ -14,6 +17,7 @@ export function PlaceMap({
   followLocation = false,
   nearestRoad,
   liveTracking=false,
+  onLocation,
 }: {
   rows: RecordItem[];
   onSelect: (r: RecordItem) => void;
@@ -25,6 +29,7 @@ export function PlaceMap({
   followLocation?: boolean;
   nearestRoad?: NearestRoad | null;
   liveTracking?:boolean;
+  onLocation?: (point: LivePoint) => void;
 }) {
   const container = useRef<HTMLDivElement>(null),
     map = useRef<any>(null),
@@ -37,9 +42,49 @@ export function PlaceMap({
     [view, setView] = useState<"normal" | "satellite">("normal"),
     [standalonePoint, setStandalonePoint] = useState<LivePoint | null>(null),
     [error, setError] = useState(""),
+    [tileError, setTileError] = useState(""),
+    [locating, setLocating] = useState(false),
+    [watching, setWatching] = useState(false),
+    [expanded, setExpanded] = useState(false),
+    [zoom, setZoom] = useState(13),
+    [notice, setNotice] = useState(""),
+    requestId = useRef(0),
+    locationCallback = useRef(onLocation),
+    expandButton = useRef<HTMLButtonElement>(null),
     [ready, setReady] = useState(false),
     [tiles, setTiles] = useState(false);
   const position = livePoint || standalonePoint;
+  locationCallback.current = onLocation;
+  useEffect(() => () => {requestId.current++;}, []);
+  useEffect(() => {
+    if (!expanded) return;
+    const old = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const escape = (e: KeyboardEvent) => {if (e.key === "Escape") {setExpanded(false); expandButton.current?.focus();}};
+    document.addEventListener("keydown", escape);
+    return () => {document.body.style.overflow = old; document.removeEventListener("keydown", escape);};
+  }, [expanded]);
+  useEffect(() => {
+    if (!ready || !container.current) return;
+    const observer = new ResizeObserver(() => map.current?.invalidateSize({pan: false}));
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [ready]);
+  useEffect(() => {
+    if (!watching || disabled || !navigator.geolocation) return;
+    let watch: number | undefined;
+    const stop = () => {if (watch !== undefined) navigator.geolocation.clearWatch(watch); watch = undefined;};
+    const resume = () => {
+      stop();
+      if (!document.hidden) watch = navigator.geolocation.watchPosition(p => {
+        const point = {lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, timestamp: p.timestamp};
+        setStandalonePoint(point); locationCallback.current?.(point); setError("");
+        map.current?.panTo([point.lat, point.lng], {animate: false});
+      }, e => {setError(locationError(e.code)); if (e.code === 1) setWatching(false);}, {enableHighAccuracy: true, timeout: 20000, maximumAge: 5000});
+    };
+    resume(); document.addEventListener("visibilitychange", resume);
+    return () => {stop(); document.removeEventListener("visibilitychange", resume);};
+  }, [watching, disabled]);
   useEffect(() => {
     let cancelled = false;
     if (disabled) return;
@@ -50,9 +95,15 @@ export function PlaceMap({
           zoomControl: false,
           center: [7.192, 8.132],
           zoom: 13,
+          minZoom: 2,
+          maxZoom: MAP_MAX_ZOOM,
+          worldCopyJump: true,
         });
         map.current = m;
         L.control.zoom({ position: "bottomright" }).addTo(m);
+        L.control.scale({position: "bottomleft", imperial: false, maxWidth: 100}).addTo(m);
+        m.on("zoomend", () => setZoom(m.getZoom()));
+        m.on("dragstart", () => setWatching(false));
         layers.current = L.layerGroup().addTo(m);
         m.on("click", (e: any) => onPin?.(e.latlng.lat, e.latlng.lng));
         setReady(true);
@@ -62,6 +113,8 @@ export function PlaceMap({
       cancelled = true;
       map.current?.remove();
       map.current = null;
+      requestId.current++;
+      setLocating(false);
       setReady(false);
     };
   }, [disabled, onPin]);
@@ -75,36 +128,23 @@ export function PlaceMap({
     if (!ready || !map.current) return;
     let cancelled = false;
     setTiles(false);
-    setError("");
+    setTileError("");
     import("leaflet").then((L) => {
       if (cancelled || !map.current) return;
       baseLayer.current?.remove();
       const satellite = view === "satellite";
-      const layer = L.tileLayer(
-        satellite
-          ? "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          maxZoom: satellite ? 20 : 19,
-          maxNativeZoom: satellite ? 19 : 19,
-          keepBuffer: 1,
-          attribution: satellite
-            ? 'Imagery © <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9" target="_blank" rel="noreferrer">Esri</a>, Vantor, Earthstar Geographics, GIS User Community'
-            : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        },
-      );
+      const layer = satellite ? satelliteLayer(L) : L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: MAP_MAX_ZOOM, maxNativeZoom: 19, keepBuffer: 1,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      });
       baseLayer.current = layer;
+      let failed = false, loaded = false;
+      layer.on("loading", () => {failed = false; loaded = false;});
+      layer.on("tileload", () => {loaded = true; if (!cancelled) {setTiles(true); setTileError("");}});
       layer.on("load", () => {
-        if (!cancelled) setTiles(true);
+        if (!cancelled && failed) setTileError(loaded ? "Some map tiles could not load. Retry to fill the gaps." : "Map tiles could not load. Check your connection and retry, or switch map view.");
       });
-      layer.on("tileerror", () => {
-        if (!cancelled)
-          setError(
-            satellite
-              ? "Satellite imagery is unavailable here. Choose Normal view to continue."
-              : "Map tiles are unavailable. Place search and coordinates still work.",
-          );
-      });
+      layer.on("tileerror", () => {failed = true;});
       layer.addTo(map.current);
     });
     return () => {
@@ -119,7 +159,11 @@ export function PlaceMap({
       rows.forEach((r) => {
         if (typeof r.data.lat !== "number" || typeof r.data.lng !== "number")
           return;
+        const label = document.createElement("span");
+        label.textContent = String(r.data.name || "Mapped place");
         L.marker([r.data.lat, r.data.lng], {
+          title: label.textContent,
+          keyboard: true,
           icon: L.divIcon({
             className: "place-marker",
             html: "<span>●</span>",
@@ -127,6 +171,7 @@ export function PlaceMap({
             iconAnchor: [14, 14],
           }),
         })
+          .bindTooltip(label, {direction: "top"})
           .addTo(layers.current)
           .on("click", () => onSelect(r));
       });
@@ -233,34 +278,25 @@ export function PlaceMap({
     } catch {}
   };
   const locate = () => {
-    if (position && map.current) {
-      map.current.setView([position.lat, position.lng], 18);
-      return;
-    }
-    if (!navigator.geolocation) {
-      setError("Location is unavailable on this device.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setStandalonePoint({
-          lat: p.coords.latitude,
-          lng: p.coords.longitude,
-          accuracy: p.coords.accuracy,
-          timestamp: p.timestamp,
-        });
-        if (map.current)
-          map.current.setView([p.coords.latitude, p.coords.longitude], 18);
-      },
-      () =>
-        setError(
-          "Location permission was declined or unavailable. You can enter coordinates instead.",
-        ),
-      { timeout: 10000, maximumAge: 60000 },
-    );
+    if (!navigator.geolocation) {setError("Location is unavailable on this device. Use a browser with location services enabled."); return;}
+    setLocating(true); setError(""); setNotice("");
+    const current = ++requestId.current;
+    navigator.geolocation.getCurrentPosition(p => {
+      if (current !== requestId.current) return;
+      const point = {lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, timestamp: p.timestamp};
+      setStandalonePoint(point); locationCallback.current?.(point); setLocating(false);
+      map.current?.setView([point.lat, point.lng], point.accuracy > 1000 ? 13 : point.accuracy > 150 ? 16 : 18);
+    }, e => {if (current === requestId.current) {setLocating(false); setError(locationError(e.code));}},
+    {enableHighAccuracy: true, timeout: 20000, maximumAge: 0});
+  };
+  const centre = () => {if (position) map.current?.setView([position.lat, position.lng], Math.max(16, map.current.getZoom())); else locate();};
+  const copyPosition = async () => {
+    if (!position) return;
+    try {await navigator.clipboard.writeText(`${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`); setNotice("Coordinates copied.");}
+    catch {setNotice("Select the coordinates above to copy your position.");}
   };
   return (
-    <div className="map-wrap">
+    <div className={"map-wrap atlas-map" + (expanded ? " map-expanded" : "")} data-map-zoom={zoom} data-map-view={view}>
       {disabled ? (
         <div className="map-off">
           <h3>Low-data mode</h3>
@@ -275,68 +311,38 @@ export function PlaceMap({
             ref={container}
             className="map-canvas"
             role="region"
-            aria-label="Interactive OpenStreetMap of Otukpo"
+            aria-label="Interactive street and satellite map"
           />
           <div className="map-label">
-            <span className="live-dot" />
-            {tiles
-              ? position
-                ? "Your GPS position"
-                : "Exploring Otukpo"
-              : "Loading map…"}
-            <small>
-              {position ? "Device GPS position" : "Benue State, Nigeria"}
-            </small>
+            <span className="live-dot" />{tiles ? position ? "Your location" : "Explore Benue" : tileError ? "Map offline" : "Loading map…"}
+            <small>{position ? `Accuracy ±${Math.round(position.accuracy)} m` : "Otukpo · Nigeria"}</small>
           </div>
-          <div className="map-view-switch" role="group" aria-label="Map view">
-            <button
-              type="button"
-              className={view === "normal" ? "active" : ""}
-              aria-pressed={view === "normal"}
-              onClick={() => changeView("normal")}
-            >
-              Normal
-            </button>
-            <button
-              type="button"
-              className={view === "satellite" ? "active" : ""}
-              aria-pressed={view === "satellite"}
-              onClick={() => changeView("satellite")}
-            >
-              Satellite
-            </button>
+          <div className="map-tools">
+            <div className="map-view-switch" role="group" aria-label="Map view">
+              <button type="button" className={view === "normal" ? "active" : ""} aria-pressed={view === "normal"} onClick={() => changeView("normal")}><Layers size={14}/>Streets</button>
+              <button type="button" className={view === "satellite" ? "active" : ""} aria-pressed={view === "satellite"} onClick={() => changeView("satellite")}><Satellite size={14}/>Satellite</button>
+            </div>
+            <button ref={expandButton} className="map-tool-button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map (Esc)" : "Expand map"} aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button>
           </div>
-          {position && (
-            <div className="map-position-legend">
-              <span>
-                <i />
-                Your GPS position
-              </span>
-              {nearestRoad && (
-                <span>
-                  <i className="street-dot" />
-                  Nearest mapped street
-                </span>
-              )}
-            </div>
-          )}
-          {view === "satellite" && (
-            <div className="satellite-capture-note">
-              Satellite imagery · capture dates vary
-              {liveTracking ? " · GPS updates live" : ""}
-            </div>
-          )}
-          <button
-            className="map-locate button secondary small"
-            onClick={locate}
-          >
-            ◎ {position ? "Centre on me" : "My location"}
-          </button>
+          <div className="map-navigation-tools">
+            <button className="map-tool-button map-home" aria-label="Return to Otukpo" title="Return to Otukpo" onClick={() => {setWatching(false); map.current?.setView([7.192, 8.132], 13);}}><MapPin size={18}/></button>
+          </div>
+          {position ? <section className="map-gps-card" aria-label="Your device location">
+            <div className="map-gps-heading"><span className="gps-dot"/><strong>{watching || liveTracking ? "Following your location" : "Your device location"}</strong><button className="map-inline-button" aria-label="Copy my coordinates" title="Copy my coordinates" onClick={copyPosition}><Copy size={15}/></button></div>
+            <p className="map-coordinates">{position.lat.toFixed(6)}, {position.lng.toFixed(6)}</p>
+            <small>Accuracy ±{Math.round(position.accuracy)} m{position.accuracy > 100 ? " · Approximate position" : " · Blue circle shows accuracy"}</small>
+            {nearestRoad && <small className="map-nearest">Nearest mapped street: {nearestRoad.name}</small>}
+            <div className="map-gps-actions"><button onClick={centre}><LocateFixed size={14}/>Centre</button><button onClick={locate} disabled={locating}><RefreshCw size={13}/>{locating ? "Finding…" : "Refresh"}</button>{!livePoint && <button aria-pressed={watching} onClick={() => setWatching(!watching)}><Navigation size={13}/>{watching ? "Stop" : "Follow me"}</button>}</div>
+            {notice && <small role="status">{notice}</small>}
+          </section> : <div className="map-location-start"><button className="button map-locate" disabled={locating} onClick={locate}><LocateFixed size={16}/>{locating ? "Finding your position…" : "My location"}</button><small>Only with your permission</small></div>}
+          <div className="map-imagery-note">{view === "satellite" ? <>Satellite imagery · dates and detail vary{zoom > 18 ? " · Enlarged view" : ""}</> : <>Street map{zoom > 19 ? " · Enlarged view" : ""}</>}<span>Zoom {zoom}</span></div>
         </>
       )}
-      {error && (
+      {(error || tileError) && (
         <div className="map-error" role="status">
-          {error}
+          <span>{error || tileError}</span>
+          {tileError && !error && <button onClick={() => {setTileError(""); baseLayer.current?.redraw();}}>Retry map</button>}
+          <button aria-label="Dismiss map message" onClick={() => {setError(""); setTileError("");}}><X size={14}/></button>
         </div>
       )}
     </div>
