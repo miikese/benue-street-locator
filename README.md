@@ -147,8 +147,10 @@ Search has a visible **Search** button. Clicking it or pressing Enter keeps matc
 
 ## Expanded Benue directory
 
-The packaged directory contains 44 sourced records across all 23 LGA filters: 34 GeoNames town/locality reference points, the original OSM/LEEF/hospital entries, three additional public OSM records in Makurdi, and three institution-published addresses in Makurdi and Katsina-Ala. A town pin is a locality reference, not a building entrance. The institution addresses remain unpinned until coordinates are confirmed.
+The regional expansion introduced 44 sourced records across all 23 LGA filters before the Otukpo street expansion below: 34 GeoNames town/locality reference points, the original OSM/LEEF/hospital entries, three additional public OSM records in Makurdi, and three institution-published addresses in Makurdi and Katsina-Ala. A town pin is a locality reference, not a building entrance. The institution addresses remain unpinned until coordinates are confirmed.
 
 Selecting an area frames its mapped references; **Show listed places on map** fits the current results. Source initialization reads existing IDs and inserts only missing entries in batches of at most 40. Existing edits and moderation decisions are preserved locally and on deployed databases.
 
 GeoNames data is attributed under CC BY 4.0. The deterministic offline importer, `scripts/import-benue-gazetteer.py`, accepts the downloaded Nigeria gazetteer and GeoNames administrative-code tables. See `docs/data-sources.md` for provenance, geographic limits and licensing.
+
+Otukpo street discovery includes 23 street/road entries and a visible **Street** shortcut. Examples include Federal Road, Rice Mill Road, Upu Road, Ogiri Oko Street, Ahmadu Bello Way and the mapped Otukpo–Weto road segment. Prefixes, common Rd/St spellings and small typing errors are searchable. The directory now totals 66 records across Benue. Twenty-one new street-name references remain unpinned; older sources show their age, and precise routing remains disabled until a pin is confirmed. Run `python3 scripts/otukpo-streets-check.py` to check this journey.

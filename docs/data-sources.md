@@ -61,3 +61,13 @@ Institution-published address sources (no coordinates invented):
 - College of Education Katsina-Ala: https://portal.coekatsinaala.edu.ng/login.jsp
 
 The app does not display placeholder phone numbers from the college portal. No operating hours, current admissions, services or access promises are inferred.
+
+## Otukpo street names — 27 October 2026
+
+Twenty-one additional unpinned street-name records and one OSM road-segment point expand Otukpo to 23 street/road entries, including the original Orokam Street. Only street names are included from address references; house numbers, occupants, polling-unit information and voter statistics are not imported.
+
+Sixteen names were read from the public 6 January 2019 Benue directory hosted by Nigeria Civil Society Situation Room, PDF pages 141–145: https://situationroomng.org/wp-content/uploads/2019/11/BENUE.pdf . The PDF was downloaded and these pages were visually checked; they include Central, East and West town sections. These are historical name references, not current street surveys. Each record retains the publication date and page link and has null coordinates. Compound junction names were excluded to avoid inventing separate streets.
+
+Five street names are corroborated by public organization addresses: Ogiri Oko Street (https://www.echijaculturalfestival.com/contact?option=media), Ahmadu Bello Way (https://jedplc.com/ccrm_offices.php), Old Makurdi Road (the Learn2Earn venue announcement linked above), and Burnt Bricks Road / New Otobo Road (https://crownjewelhmo.com/providers/). No building coordinates are inferred from these addresses.
+
+Otukpo–Weto Road uses https://www.openstreetmap.org/way/294440965 from the bounded OSM map snapshot. Its point (7.2112188, 8.1201182) is an actual mapped road node within Otukpo, not the road midpoint, entire route or a building entrance. The source's Oturkpo spelling remains a search alias. OSM/ODbL attribution applies. No road geometry or current passability is invented.
