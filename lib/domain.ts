@@ -29,12 +29,13 @@ export function validate(kind:string,d:Record<string,unknown>) {
 export function canTransition(_kind:string,from:string,to:string) {
  return ({pending:["under-review","approved","rejected"],"under-review":["approved","rejected"],approved:["under-review"],rejected:["under-review"]} as Record<string,string[]>)[from]?.includes(to) || false;
 }
-// Search our reviewed directory only; never send keystrokes to a geocoder.
-function normalizeSearch(value:string) {
- return value.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+// Local matching works offline; optional live suggestions use the separate geocoder.
+export function normalizeSearch(value:string) {
+ return value.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/\bcentre\b/g,"center").replace(/[^\p{L}\p{N}]+/gu," ");
 }
 function oneEditApart(a:string,b:string) {
  if(Math.abs(a.length-b.length)>1)return false;
+ if(a.length===b.length){const differences=[...a].map((c,i)=>c!==b[i]?i:-1).filter(i=>i>=0);if(differences.length===2&&differences[1]===differences[0]+1&&a[differences[0]]===b[differences[1]]&&a[differences[1]]===b[differences[0]])return true;}
  let i=0,j=0,edits=0;
  while(i<a.length && j<b.length) {
   if(a[i]===b[j]){i++;j++;continue;}
@@ -50,7 +51,8 @@ export function matchPlaces<T extends {data:Record<string,unknown>}>(rows:T[],q:
   if((lga && r.data.lga!==lga)||(category && r.data.category!==category))return false;
   const haystack=normalizeSearch([r.data.name,r.data.aliases,r.data.address,r.data.town,r.data.description].join(" "));
   const words=haystack.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-  return terms.every(term=>haystack.includes(term)||(term.length>=4 && words.some(word=>oneEditApart(term,word))));
+  const nameWords=normalizeSearch([r.data.name,r.data.aliases].join(" ")).split(" ");
+  return terms.every(term=>term.length===1?nameWords.some(word=>word.startsWith(term)):haystack.includes(term)||(term.length>=3 && words.some(word=>oneEditApart(term,word)||oneEditApart(term,word.slice(0,term.length)))));
  });
 }
 export function distance(a:{lat:number,lng:number},b:{lat:number,lng:number}) {

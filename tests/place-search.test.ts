@@ -12,8 +12,18 @@ describe('related place suggestions',()=>{
   expect(suggestPlaces(records,'Otuk').length).toBe(3);
   expect(suggestPlaces(records,'Orokamm').some(r=>r.id==='street')).toBe(true);
  });
- it('does not suggest for empty, single-letter, coordinate or unrelated queries',()=>{
-  for(const query of ['', 'O', '7.179556, 8.153785', 'no-such-location'])expect(suggestPlaces(records,query)).toEqual([]);
+ it('does not suggest for empty, coordinate or unrelated queries',()=>{
+  for(const query of ['', '7.179556, 8.153785', 'no-such-location'])expect(suggestPlaces(records,query)).toEqual([]);
+ });
+ it('starts at one letter and ranks names instead of incidental description words',()=>{
+  const leaf=place('leef','LEEF Centre',{aliases:'LEEF Center Learn2Earn'});
+  expect(suggestPlaces([...records,leaf],'l','Otukpo').map(r=>r.id)).toEqual(['leef']);
+  expect(suggestPlaces([leaf],'leef center','Otukpo')[0].id).toBe('leef');
+  expect(suggestPlaces(records,'O').map(r=>r.id)).toEqual(['street','clinic']);
+ });
+ it('handles swapped letters and misspelled prefixes',()=>{
+  expect(suggestPlaces(records,'Orkoam').some(r=>r.id==='street')).toBe(true);
+  expect(suggestPlaces(records,'Oroka').some(r=>r.id==='street')).toBe(true);
  });
  it('honours filters and never suggests private or pending submissions',()=>{
   const hidden={...place('pending','Orokam Secret'),status:'pending'};

@@ -29,3 +29,14 @@ Satellite context uses the existing Esri World Imagery service with transparent 
 
 - Google Maps exact-coordinate search and satellite view links (no API key): https://developers.google.com/maps/documentation/urls/get-started
 - An embedded Google map, if added separately, requires an authorized API key: https://developers.google.com/maps/documentation/embed/embedding-map
+
+## Place suggestions and LEEF Centre
+
+- Photon API supports search-as-you-type, typo tolerance and geographic bias: https://github.com/komoot/photon/blob/master/docs/api-v1.md
+- Demo provider usage must remain reasonable: https://github.com/komoot/photon#demo-server . The client waits 750 ms and three characters before lookups, cancels stale requests, and caches results. The server retains its shared request limit and one-day query cache, keyed separately by LGA.
+- First-letter local suggestions use public directory names and aliases; they do not expose pending/private submissions.
+- Learn2Earn's own venue announcement supplies the LEEF address: https://www.linkedin.com/posts/learn2earnng_learn2earn-otukpo-benuestate-activity-7452789888120344577-tq8u
+- The LEEF visitor coordinate is user-supplied from the Google Maps screenshot, not independently surveyed, scraped from Google, or inferred from the address. It is labelled approximate in the directory.
+- OpenStreetMap/Photon may lack businesses Google lists. The app provides a town-qualified Google Maps search link for additional coverage; no Google Places API key is configured.
+
+The Otukpo town search uses an approximate town bounding box (8.02,7.10–8.30,7.35 longitude/latitude); this is not a surveyed LGA border. Other LGA names are passed as textual provider context inside the wider Benue search box.

@@ -1,17 +1,18 @@
-import {matchPlaces} from "./domain";
+import {matchPlaces,normalizeSearch} from "./domain";
 import type {RecordItem} from "./client";
 
-const normalize=(value:unknown)=>String(value||"").normalize("NFKD").replace(/\p{M}/gu,"").toLowerCase();
+const normalize=(value:unknown)=>normalizeSearch(String(value||""));
 
 export function suggestPlaces(rows:RecordItem[],query:string,lga="",category="") {
   const term=query.trim();
-  if(term.length<2 || /^[-+\d.\s,]+$/.test(term))return [];
+  if(term.length<1 || /^[-+\d.\s,]+$/.test(term))return [];
   const normalized=normalize(term);
   const score=(record:RecordItem)=>{
     const name=normalize(record.data.name);
     return name.startsWith(normalized)?0:name.includes(normalized)?1:normalize(record.data.aliases).includes(normalized)?2:3;
   };
   return matchPlaces(rows.filter(record=>record.kind==="place"&&record.status==="approved"),term,lga,category)
+    .filter(record=>term.length>1||normalize([record.data.name,record.data.aliases].join(" ")).split(" ").some(word=>word.startsWith(normalized)))
     .sort((a,b)=>score(a)-score(b)||String(a.data.name).localeCompare(String(b.data.name)))
     .slice(0,6);
 }

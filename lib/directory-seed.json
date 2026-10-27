@@ -18,5 +18,25 @@
       "sourceCheckedAt": "2026-10-13",
       "verification": "Sourced address; map pin not confirmed"
     }
+  },
+  {
+    "id": "directory-leef-centre-otukpo",
+    "kind": "place",
+    "status": "approved",
+    "data": {
+      "name": "LEEF Centre",
+      "aliases": "LEEF Center Leef CBT Centre Learn2Earn Learn to Earn learning centre",
+      "category": "School",
+      "lga": "Otukpo",
+      "town": "Otukpo",
+      "address": "Old Makurdi Road, off Burnt Bricks, near St Helen’s Hospital, Otukpo",
+      "description": "Learn2Earn publicly identifies this venue at Old Makurdi Road, off Burnt Bricks, near St Helen’s Hospital. The map pin is the coordinate supplied in your Google Maps screenshot; it is an approximate visitor reference, not a surveyed building entrance. Confirm the entrance locally before travelling.",
+      "lat": 7.179556,
+      "lng": 8.153785,
+      "source": "Learn2Earn venue announcement; user-supplied map pin",
+      "sourceUrl": "https://www.linkedin.com/posts/learn2earnng_learn2earn-otukpo-benuestate-activity-7452789888120344577-tq8u",
+      "sourceCheckedAt": "2026-10-27",
+      "verification": "Published venue address; approximate user-provided pin"
+    }
   }
 ]

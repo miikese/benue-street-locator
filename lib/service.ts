@@ -42,7 +42,7 @@ async function handleRequest(req:Request,ctx:Context):Promise<Response> {
    const lat=url.searchParams.get("lat"),lng=url.searchParams.get("lng");if(lat===null||lng===null||!lat.trim()||!lng.trim())error("Latitude and longitude are required.");
    return json(await nearestRoad(Number(lat),Number(lng),db,ctx.routingUrl));
   }
-  if(path==="geocode" && req.method==="GET")return json(await geocode(url.searchParams.get("q")||"",db,ctx.geocodeUrl));
+  if(path==="geocode" && req.method==="GET")return json(await geocode(url.searchParams.get("q")||"",db,ctx.geocodeUrl,fetch,url.searchParams.get("lga")||""));
   if(req.method!=="GET" && req.method!=="HEAD") {
    const origin=req.headers.get("origin");
    if(origin && origin!==url.origin) error("Cross-origin writes are not allowed.",403);
@@ -67,6 +67,8 @@ async function handleRequest(req:Request,ctx:Context):Promise<Response> {
    const u=await stmt("SELECT * FROM users WHERE id=?",user.userId).first();
    return json({user:{id:user.userId,name:user.displayName,email:isOwner?user.email:undefined,role:isOwner?"super_admin":(ctx.adminIds.includes(user.userId)||(user.email&&ctx.adminEmails?.includes(user.email.toLowerCase())))?"admin":u.role},notifications:await all("SELECT * FROM notifications WHERE owner=? ORDER BY created DESC LIMIT 50",user.userId)});
   }
+  // Initialize sourced entries for both directory and shared-link reads; existing moderation wins.
+   if(req.method==="GET"&&(path==="records"||path.startsWith("records/"))&&ctx.seed?.length&&!url.searchParams.has("mine")&&!url.searchParams.has("review"))await db.batch((ctx.seed||[]).map(r=>stmt("INSERT OR IGNORE INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)",r.id,r.kind,"source-import",r.status,JSON.stringify(r.data),now,now)));
   if(path==="records" && req.method==="GET") {
    const kind=url.searchParams.get("kind")||"",mine=url.searchParams.get("mine")==="1",review=url.searchParams.get("review")==="1";
    if(mine)signed();if(review)await admin();

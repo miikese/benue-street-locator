@@ -61,3 +61,11 @@ it("keeps approved places and own contributions visible through a large pending 
 });
 
 it("applies a reviewed correction to the original public place",async()=>{ctx.user=admin;const original=await call("records","POST",{kind:"place",data:place});await call("records/"+original.body.id,"PATCH",{status:"approved",note:"Reviewed original automated map fixture."});ctx.user=user;const fix=await call("records","POST",{kind:"correction",data:{...place,name:"Updated public school",lat:7.2,lng:8.14,target:original.body.id}});ctx.user=admin;expect((await call("records/"+fix.body.id,"PATCH",{status:"approved",note:"Reviewed coordinate evidence for the test correction."})).status).toBe(200);const updated=await call("records/"+original.body.id);expect(updated.body.record.data.lat).toBe(7.2);expect(updated.body.record.data.name).toBe("Updated public school");});
+
+it("initializes packaged directory entries without reversing moderation",async()=>{
+ const ctx={db,user:null,adminIds:[],seed:[{id:"sourced-leef",kind:"place",status:"approved",data:{name:"LEEF Centre",lga:"Otukpo"}}]};
+ const request=()=>handle(new Request("https://x/api/records?kind=place"),ctx);
+ expect(((await (await request()).json()) as any).records.some((r:any)=>r.id==="sourced-leef")).toBe(true);
+ await db.prepare("UPDATE records SET status='under-review' WHERE id=?").bind("sourced-leef").run();
+ expect(((await (await request()).json()) as any).records.some((r:any)=>r.id==="sourced-leef")).toBe(false);
+});

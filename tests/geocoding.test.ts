@@ -58,3 +58,12 @@ it("limits concurrent uncached searches across the app", async () => {
 });
 
 it("accepts Benue State metadata and excludes neighbouring states",async()=>{const a=feature(),b=feature();a.properties.state="Benue State";b.properties.state="Kogi";const result=await geocode("Public landmark",db,undefined,async()=>Response.json({features:[a,b]}));expect(result.results).toHaveLength(1);});
+
+it("uses town context and a distinct cached query for each LGA",async()=>{
+ const f=vi.fn(async (_url:any)=>Response.json({features:[feature()]}));
+ await geocode("school",db,undefined,f,"Otukpo");
+ const params=new URL(String(f.mock.calls[0][0])).searchParams;
+ expect(params.get("bbox")).toBe("8.02,7.1,8.3,7.35");expect(params.get("q")).toBe("school Otukpo");expect(params.get("countrycode")).toBe("NG");expect(params.get("lat")).toBe("7.192");
+ await geocode("school",db,undefined,f,"Otukpo");expect(f).toHaveBeenCalledTimes(1);
+ await expect(geocode("school",db,undefined,f,"Unknown")).rejects.toThrow("valid Benue LGA");
+});

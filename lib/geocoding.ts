@@ -1,19 +1,22 @@
 import type { DB } from "./service";
-import { coordinates } from "./domain";
+import { coordinates,LGAS } from "./domain";
 export async function geocode(
   query: string,
   db: DB,
   endpoint = "https://photon.komoot.io/api/",
   fetcher: typeof fetch = fetch,
+  lga = "",
 ) {
   const q = query.trim();
+  if(lga&&!LGAS.includes(lga))throw new Error("Choose a valid Benue LGA.");
+  const cacheKey="v4:"+lga.toLowerCase()+":"+q.toLowerCase();
   if (q.length < 3 || q.length > 180)
     throw new Error(
       "Enter a public address or place name between 3 and 180 characters.",
     );
   const cached = await db
     .prepare("SELECT data FROM geocode_cache WHERE query=? AND expires>?")
-    .bind("v2:" + q.toLowerCase(), Date.now())
+    .bind(cacheKey, Date.now())
     .first();
   if (cached) return JSON.parse(cached.data);
   const key = "geocode:" + Math.floor(Date.now() / 1000),
@@ -29,8 +32,10 @@ export async function geocode(
       { status: 429 },
     );
   const url = new URL(endpoint);
-  url.searchParams.set("q", q);
-  url.searchParams.set("bbox", "7.2,6.3,10.1,8.6");
+  url.searchParams.set("q", lga&&!q.toLowerCase().includes(lga.toLowerCase())?q+" "+lga:q);
+  url.searchParams.set("countrycode","NG");
+  if(lga==="Otukpo"){url.searchParams.set("lat","7.192");url.searchParams.set("lon","8.132");url.searchParams.set("zoom","12");}
+  url.searchParams.set("bbox", lga==="Otukpo"?"8.02,7.1,8.3,7.35":"7.2,6.3,10.1,8.6");
   url.searchParams.set("limit", "20");
   url.searchParams.set("lang", "en");
   let response: Response;
@@ -82,8 +87,8 @@ export async function geocode(
             lng,
             address,
             town: p.city || p.district || "Benue",
-            lga: "Benue",
-            category: "Map result",
+            lga: p.county || p.city || "Benue",
+            category: ({hospital:"Hospital",clinic:"Clinic",pharmacy:"Pharmacy",school:"School",university:"School",college:"School",marketplace:"Market",hotel:"Hotel",restaurant:"Restaurant",police:"Police",bus_station:"Transport",station:"Transport"} as Record<string,string>)[p.osm_value] || (p.osm_key==="highway"?"Street":p.osm_key==="shop"?"Shop":"Map result"),
             description:
               "An OpenStreetMap address reference. Building numbers and local conditions may be incomplete. Confirm the destination before travelling.",
             source: "OpenStreetMap",
@@ -111,7 +116,7 @@ export async function geocode(
       "INSERT INTO geocode_cache(query,data,expires) VALUES(?,?,?) ON CONFLICT(query) DO UPDATE SET data=excluded.data,expires=excluded.expires",
     )
     .bind(
-      "v2:" + q.toLowerCase(),
+      cacheKey,
       JSON.stringify(result),
       Date.now() + 86400000,
     )
