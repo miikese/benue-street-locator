@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import {LocateFixed, Maximize2, Minimize2, Copy, RefreshCw, Navigation, MapPin, Layers, Satellite, X} from "lucide-react";
-import {MAP_MAX_ZOOM, locationError} from "../lib/map-tiles";
+import {LocateFixed, Maximize2, Minimize2, Copy, RefreshCw, Navigation, MapPin, Layers, Satellite, Tags, X} from "lucide-react";
+import {MAP_MAX_ZOOM, imageryIsEnlarged, locationError} from "../lib/map-tiles";
 import {satelliteLayer} from "./satellite-layer";
+import {mapLabels} from "./map-labels";
 import type { LivePoint } from "../lib/navigation";
 import type { NearestRoad } from "../lib/nearest-road";
 import type { RecordItem } from "../lib/client";
@@ -37,9 +38,13 @@ export function PlaceMap({
     routing = useRef<any>(null),
     positionLayer = useRef<any>(null),
     baseLayer = useRef<any>(null),
+    labelsLayer = useRef<any>(null),
     streetLayer = useRef<any>(null),
     firstLocation = useRef(true),
     [view, setView] = useState<"normal" | "satellite">("normal"),
+    [labels, setLabels] = useState(true),
+    [labelsError, setLabelsError] = useState(false),
+    [detailZoom, setDetailZoom] = useState<number | null>(null),
     [standalonePoint, setStandalonePoint] = useState<LivePoint | null>(null),
     [error, setError] = useState(""),
     [tileError, setTileError] = useState(""),
@@ -122,6 +127,7 @@ export function PlaceMap({
     try {
       if (localStorage.getItem("benue-map-view") === "satellite")
         setView("satellite");
+      setLabels(localStorage.getItem("benue-map-labels")!=="0");
     } catch {}
   }, []);
   useEffect(() => {
@@ -129,6 +135,7 @@ export function PlaceMap({
     let cancelled = false;
     setTiles(false);
     setTileError("");
+    setDetailZoom(null);
     import("leaflet").then((L) => {
       if (cancelled || !map.current) return;
       baseLayer.current?.remove();
@@ -139,8 +146,11 @@ export function PlaceMap({
       });
       baseLayer.current = layer;
       let failed = false, loaded = false;
-      layer.on("loading", () => {failed = false; loaded = false;});
-      layer.on("tileload", () => {loaded = true; if (!cancelled) {setTiles(true); setTileError("");}});
+      layer.on("loading", () => {failed = false; loaded = false; setDetailZoom(null);});
+      layer.on("tileload", (event) => {loaded = true; if (!cancelled) {
+        setTiles(true); setTileError("");
+        if(satellite){const level=Number((event.tile as HTMLElement).dataset.imageryLevel);if(Number.isFinite(level))setDetailZoom(current=>current===null?level:Math.min(current,level));}
+      }});
       layer.on("load", () => {
         if (!cancelled && failed) setTileError(loaded ? "Some map tiles could not load. Retry to fill the gaps." : "Map tiles could not load. Check your connection and retry, or switch map view.");
       });
@@ -151,6 +161,16 @@ export function PlaceMap({
       cancelled = true;
     };
   }, [view, ready]);
+  useEffect(()=>{
+    if(!ready || !map.current)return;
+    let cancelled=false;setLabelsError(false);
+    labelsLayer.current?.remove();labelsLayer.current=null;
+    if(view==="satellite" && labels)import("leaflet").then(L=>{
+      if(cancelled || !map.current)return;
+      labelsLayer.current=mapLabels(L,map.current,failed=>{if(!cancelled)setLabelsError(failed);}).addTo(map.current);
+    });
+    return ()=>{cancelled=true;labelsLayer.current?.remove();};
+  },[view,ready,labels]);
   useEffect(() => {
     if (!ready || !map.current) return;
     import("leaflet").then((L) => {
@@ -165,7 +185,7 @@ export function PlaceMap({
           title: label.textContent,
           keyboard: true,
           icon: L.divIcon({
-            className: "place-marker",
+            className: "place-marker"+(selected?.id===r.id?" place-marker-selected":""),
             html: "<span>●</span>",
             iconSize: [28, 28],
             iconAnchor: [14, 14],
@@ -176,7 +196,7 @@ export function PlaceMap({
           .on("click", () => onSelect(r));
       });
     });
-  }, [rows, ready, onSelect]);
+  }, [rows, ready, onSelect, selected?.id]);
   useEffect(() => {
     if (
       selected &&
@@ -185,7 +205,7 @@ export function PlaceMap({
       typeof selected.data.lat === "number" &&
       typeof selected.data.lng === "number"
     )
-      map.current.flyTo([selected.data.lat, selected.data.lng], 15, {
+      map.current.flyTo([selected.data.lat, selected.data.lng], 16, {
         duration: 0.5,
       });
   }, [selected, ready, followLocation]);
@@ -195,10 +215,11 @@ export function PlaceMap({
       if (!map.current) return;
       routing.current?.remove();
       if (route?.length) {
-        routing.current = L.polyline(
-          route.map((c) => [c[1], c[0]] as [number, number]),
-          { color: "#17684b", weight: 5 },
-        ).addTo(map.current);
+        const points=route.map(c=>[c[1],c[0]] as [number,number]);
+        routing.current = L.featureGroup([
+          L.polyline(points,{color:"#fff",weight:9,opacity:.9}),
+          L.polyline(points,{color:"#17684b",weight:5,opacity:1}),
+        ]).addTo(map.current);
         map.current.fitBounds(routing.current.getBounds(), {
           padding: [30, 30],
         });
@@ -325,6 +346,7 @@ export function PlaceMap({
             <button ref={expandButton} className="map-tool-button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map (Esc)" : "Expand map"} aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button>
           </div>
           <div className="map-navigation-tools">
+            {view==="satellite" && <button type="button" className={"map-tool-button map-label-toggle"+(labels?" active":"")} aria-label="Show satellite labels" aria-pressed={labels} title={labels?"Hide road and place labels":"Show road and place labels"} onClick={()=>{setLabels(!labels);try{localStorage.setItem("benue-map-labels",labels?"0":"1");}catch{}}}><Tags size={18}/></button>}
             <button className="map-tool-button map-home" aria-label="Return to Otukpo" title="Return to Otukpo" onClick={() => {setWatching(false); map.current?.setView([7.192, 8.132], 13);}}><MapPin size={18}/></button>
           </div>
           {position ? <section className="map-gps-card" aria-label="Your device location">
@@ -335,7 +357,8 @@ export function PlaceMap({
             <div className="map-gps-actions"><button onClick={centre}><LocateFixed size={14}/>Centre</button><button onClick={locate} disabled={locating}><RefreshCw size={13}/>{locating ? "Finding…" : "Refresh"}</button>{!livePoint && <button aria-pressed={watching} onClick={() => setWatching(!watching)}><Navigation size={13}/>{watching ? "Stop" : "Follow me"}</button>}</div>
             {notice && <small role="status">{notice}</small>}
           </section> : <div className="map-location-start"><button className="button map-locate" disabled={locating} onClick={locate}><LocateFixed size={16}/>{locating ? "Finding your position…" : "My location"}</button><small>Only with your permission</small></div>}
-          <div className="map-imagery-note">{view === "satellite" ? <>Satellite imagery · dates and detail vary{zoom > 18 ? " · Enlarged view" : ""}</> : <>Street map{zoom > 19 ? " · Enlarged view" : ""}</>}<span>Zoom {zoom}</span></div>
+          <div className="map-imagery-note" aria-live="polite">{view === "satellite" ? <><span>{imageryIsEnlarged(zoom,detailZoom)?"Enlarged imagery · no extra detail":"Satellite imagery · dates and detail vary"}</span>{imageryIsEnlarged(zoom,detailZoom) && <button type="button" title="Zoom out to the available image detail" onClick={()=>map.current?.setZoom(detailZoom!)}>Best detail</button>}</> : <span>Street map{zoom > 19 ? " · Enlarged view" : ""}</span>}<span>Zoom {zoom}</span></div>
+          {view==="satellite" && labels && labelsError && <p className="map-labels-status" role="status">Some labels are unavailable. Toggle labels to retry.</p>}
         </>
       )}
       {(error || tileError) && (

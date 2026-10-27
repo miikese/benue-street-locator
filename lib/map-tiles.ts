@@ -1,6 +1,12 @@
 export const MAP_MAX_ZOOM = 22;
 export const SATELLITE_NATIVE_ZOOM = 20;
 export const IMAGERY_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer";
+export const LABEL_URLS = ["World_Boundaries_and_Places", "World_Transportation"].map(name =>
+  `https://services.arcgisonline.com/ArcGIS/rest/services/Reference/${name}/MapServer/tile/{z}/{y}/{x}`);
+
+export function imageryIsEnlarged(zoom: number, availableZoom: number | null) {
+  return availableZoom !== null && zoom > availableZoom;
+}
 
 // Crop the matching part of a parent tile, rather than stretching the whole
 // parent into each child. This keeps roads and GPS pins correctly aligned.

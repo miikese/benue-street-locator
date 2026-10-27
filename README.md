@@ -120,3 +120,13 @@ St Helen Specialist Hospital is included as a sourced public address from Crown 
 Live navigation shows your reported GPS coordinates, accuracy in metres and a separate nearest-road marker. **Centre on me** zooms to your current position; **Copy coordinates** copies the current fix. Street lookup refreshes every 15 seconds from the current GPS position using the OSRM driving network. An unnamed road stays labelled as unnamed; road coverage and GPS accuracy determine how closely the street match represents your position. Coordinates are shared only with the configured routing provider while this opt-in screen is tracking, and are not recorded in the database.
 
 Every map has **Normal / Satellite** controls. Satellite uses Esri World Imagery; imagery capture dates vary by location and the imagery is not a live satellite feed. Your GPS marker continues updating over either map view. The map-view preference is saved on this device. Network access is required for tiles; no offline satellite tiles are downloaded.
+
+## Satellite and external location views
+
+Satellite view includes switchable Esri road/place labels, visible pins and route outlines. When a lower-resolution parent tile is enlarged, the map discloses that extra zoom adds no detail; **Best detail** returns to the available tile resolution. Map detail depends on the provider's coverage, not on artificial sharpening.
+
+Pinned place details include a real satellite context preview when no approved photograph exists. Low-data mode pauses this preview. A preview is labelled as imagery, not a ground-level photograph or verified entrance.
+
+**Google Earth** and **Apple Maps** open the selected coordinates in the provider's website/app when clicked. **Download pin for Google Earth Pro** exports a standard KML placemark (longitude, latitude order) that can be opened in Earth Pro. These are external handoffs and KML export, not embedded Google/Apple imagery. No Google or Apple API key is required for these features; direct embedded Apple MapKit would require a Maps token. Nothing is sent to these two providers until the visitor chooses a link.
+
+Checks: `npm run typecheck`, `npm test`, `npm run build:local`, `npm run build`, and `python3 scripts/imagery-check.py` with the local companion running. The browser check covers live imagery, overzoom recovery, label controls, coordinate links, a parsed KML download, low-data mode and 320/390/1440-pixel layouts.

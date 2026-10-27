@@ -18,3 +18,11 @@ Research:
 - https://project-osrm.org/docs/v5.24.0/api/ — real driving routes with geometry,
   steps, distance and estimates; unavailable routing displays a useful fallback.
 - https://fixmystreet.org/how-it-works/ — review histories and followable records.
+
+Satellite context uses the existing Esri World Imagery service with transparent World Boundaries and Places / World Transportation labels. Image dates and resolution vary by location; imagery is not live. Zooming beyond the tile resolution enlarges existing pixels. No AI-generated location imagery, Google/Apple tile scraping, bulk tile downloads or map-image service-worker caching are added.
+
+- Esri imagery and metadata: https://www.arcgis.com/home/item.html?id=c03a526d94704bfb839445e80de95495
+- Apple coordinate links: https://developer.apple.com/documentation/mapkit/unified-map-urls
+- Apple embedded map authorization: https://developer.apple.com/documentation/mapkitjs/creating-a-maps-token
+- Google Earth coordinate search: https://support.google.com/earth/answer/148068
+- KML placemark format and coordinate order: https://developers.google.com/kml/documentation/kmlreference
