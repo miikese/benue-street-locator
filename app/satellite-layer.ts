@@ -8,6 +8,7 @@ export function satelliteLayer(L: typeof Leaflet) {
     createTile(coords: Leaflet.Coords, done: Leaflet.DoneCallback) {
       const tile = document.createElement("div"), img = document.createElement("img");
       tile.style.overflow = "hidden";
+      tile.dataset.tileX=String(coords.x);tile.dataset.tileY=String(coords.y);tile.dataset.tileZoom=String(coords.z);
       img.alt = "";
       img.draggable = false;
       Object.assign(img.style, {position: "absolute", maxWidth: "none", maxHeight: "none"});

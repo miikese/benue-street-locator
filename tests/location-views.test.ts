@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {locationKml,locationViews} from "../lib/location-views";
+import {coordinateSearch,googleMapsSearch,locationKml,locationViews} from "../lib/location-views";
 import {imageryIsEnlarged} from "../lib/map-tiles";
 
 describe("external location views",()=>{
@@ -9,6 +9,8 @@ describe("external location views",()=>{
   expect(apple.origin).toBe("https://maps.apple.com");
   expect(apple.searchParams.get("coordinate")).toBe("7.192000,8.132000");
   expect(apple.searchParams.get("name")).toBe("Otukpo & surroundings");
+  expect(new URL(links.google).searchParams.get("query")).toBe("7.192000,8.132000");
+  expect(new URL(links.googleSatellite).searchParams.get("basemap")).toBe("satellite");
   expect(decodeURIComponent(new URL(links.earth).pathname)).toBe("/web/search/7.192000,8.132000");
  });
  it("keeps arbitrary place names in an encoded query",()=>{
@@ -37,5 +39,19 @@ describe('imagery detail disclosure',()=>{
   expect(imageryIsEnlarged(17,17)).toBe(false);
   expect(imageryIsEnlarged(18,17)).toBe(true);
   expect(imageryIsEnlarged(22,18)).toBe(true);
+ });
+});
+
+describe('coordinate searches',()=>{
+ it('recognizes the supplied Google example with surrounding whitespace',()=>{
+  expect(coordinateSearch('  7.179556 , 8.153785  ')).toEqual({lat:7.179556,lng:8.153785});
+  expect(coordinateSearch('St Helen Specialist Hospital, Otukpo')).toBeNull();
+  expect(()=>coordinateSearch('91,8')).toThrow();
+ });
+ it('keeps provider searches encoded and within the Google URL length limit',()=>{
+  const url=new URL(googleMapsSearch('St Helen & Resort?x=1'));
+  expect(url.searchParams.get('api')).toBe('1');
+  expect(url.searchParams.get('query')).toBe('St Helen & Resort?x=1');
+  expect(googleMapsSearch('😀'.repeat(400)).length).toBeLessThan(2048);
  });
 });

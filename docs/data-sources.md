@@ -26,3 +26,6 @@ Satellite context uses the existing Esri World Imagery service with transparent 
 - Apple embedded map authorization: https://developer.apple.com/documentation/mapkitjs/creating-a-maps-token
 - Google Earth coordinate search: https://support.google.com/earth/answer/148068
 - KML placemark format and coordinate order: https://developers.google.com/kml/documentation/kmlreference
+
+- Google Maps exact-coordinate search and satellite view links (no API key): https://developers.google.com/maps/documentation/urls/get-started
+- An embedded Google map, if added separately, requires an authorized API key: https://developers.google.com/maps/documentation/embed/embedding-map

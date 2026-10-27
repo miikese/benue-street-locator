@@ -8,7 +8,7 @@ export function LocationPreview({lat,lng,name,disabled=false}:{lat:number;lng:nu
   const [state,setState]=useState("loading");
   useEffect(()=>{
     if(disabled)return;
-    let cancelled=false;let map:import("leaflet").Map|undefined;
+    let frame:number|undefined;let cancelled=false;let map:import("leaflet").Map|undefined;
     setState("loading");
     import("leaflet").then(L=>{
       if(cancelled || !container.current)return;
@@ -22,9 +22,9 @@ export function LocationPreview({lat,lng,name,disabled=false}:{lat:number;lng:nu
       retry.current=()=>{loaded=false;setState("loading");imagery.redraw();};
       mapLabels(L,map).addTo(map);
       L.marker([lat,lng],{title:name,icon:L.divIcon({className:"place-marker place-marker-selected",html:"<span>●</span>",iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map);
-      requestAnimationFrame(()=>map?.invalidateSize());
+      frame=requestAnimationFrame(()=>{if(!cancelled)map?.invalidateSize();});
     }).catch(()=>{if(!cancelled)setState("error");});
-    return ()=>{cancelled=true;retry.current=()=>{};map?.remove();};
+    return ()=>{cancelled=true;if(frame!==undefined)cancelAnimationFrame(frame);retry.current=()=>{};map?.remove();map=undefined;};
   },[lat,lng,name,disabled]);
   return <figure className="location-preview">
     {disabled?<div className="location-preview-paused">Satellite preview paused in low-data mode.</div>:<><div ref={container} className="location-preview-map" role="region" aria-label={`Satellite preview of ${name}`}/>{state!=="ready" && <div className="location-preview-status" role="status">{state==="error"?<><span>Satellite preview is unavailable.</span><button type="button" onClick={()=>retry.current()}>Retry preview</button></>:"Loading satellite preview…"}</div>}</>}

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {LocateFixed, Maximize2, Minimize2, Copy, RefreshCw, Navigation, MapPin, Layers, Satellite, Tags, X} from "lucide-react";
-import {MAP_MAX_ZOOM, imageryIsEnlarged, locationError} from "../lib/map-tiles";
+import {MAP_MAX_ZOOM, SATELLITE_NATIVE_ZOOM, imageryIsEnlarged, locationError} from "../lib/map-tiles";
 import {satelliteLayer} from "./satellite-layer";
 import {mapLabels} from "./map-labels";
 import type { LivePoint } from "../lib/navigation";
@@ -133,6 +133,7 @@ export function PlaceMap({
   useEffect(() => {
     if (!ready || !map.current) return;
     let cancelled = false;
+    let releaseDetail = () => {};
     setTiles(false);
     setTileError("");
     setDetailZoom(null);
@@ -146,10 +147,22 @@ export function PlaceMap({
       });
       baseLayer.current = layer;
       let failed = false, loaded = false;
-      layer.on("loading", () => {failed = false; loaded = false; setDetailZoom(null);});
-      layer.on("tileload", (event) => {loaded = true; if (!cancelled) {
-        setTiles(true); setTileError("");
-        if(satellite){const level=Number((event.tile as HTMLElement).dataset.imageryLevel);if(Number.isFinite(level))setDetailZoom(current=>current===null?level:Math.min(current,level));}
+      const m=map.current;
+      // Inspect the current centre tile. Late events from an old zoom must not
+      // make "Best detail" jump out to an unrelated, coarser level.
+      const updateDetail=()=>{
+        if(cancelled || !satellite || !container.current)return;
+        const z=Math.min(m.getZoom(),SATELLITE_NATIVE_ZOOM),count=2**z;
+        const point=m.project(m.getCenter(),z);
+        const x=((Math.floor(point.x/256)%count)+count)%count,y=Math.max(0,Math.min(count-1,Math.floor(point.y/256)));
+        const tile=container.current.querySelector<HTMLElement>(`[data-tile-zoom="${z}"][data-tile-x="${x}"][data-tile-y="${y}"].leaflet-tile-loaded`);
+        setDetailZoom(tile?Number(tile.dataset.imageryLevel):null);
+      };
+      m.on("zoomend moveend",updateDetail);
+      releaseDetail=()=>m.off("zoomend moveend",updateDetail);
+      layer.on("loading", () => {failed = false; loaded = false; updateDetail();});
+      layer.on("tileload", () => {loaded = true; if (!cancelled) {
+        setTiles(true); setTileError("");updateDetail();
       }});
       layer.on("load", () => {
         if (!cancelled && failed) setTileError(loaded ? "Some map tiles could not load. Retry to fill the gaps." : "Map tiles could not load. Check your connection and retry, or switch map view.");
@@ -159,6 +172,7 @@ export function PlaceMap({
     });
     return () => {
       cancelled = true;
+      releaseDetail();
     };
   }, [view, ready]);
   useEffect(()=>{
@@ -176,7 +190,8 @@ export function PlaceMap({
     import("leaflet").then((L) => {
       if (!map.current || !layers.current) return;
       layers.current.clearLayers();
-      rows.forEach((r) => {
+      const records=selected&&!rows.some(record=>record.id===selected.id)?[...rows,selected]:rows;
+      records.forEach((r) => {
         if (typeof r.data.lat !== "number" || typeof r.data.lng !== "number")
           return;
         const label = document.createElement("span");

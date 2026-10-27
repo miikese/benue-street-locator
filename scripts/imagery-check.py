@@ -9,7 +9,7 @@ with sync_playwright() as pw:
  browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',headless=True,args=['--no-sandbox'])
  context=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True)
  page=context.new_page();errors=[];requests=[]
- page.on('pageerror',lambda error:errors.append(str(error)));page.on('request',lambda request:requests.append(request.url))
+ page.on('pageerror',lambda error:(errors.append(error.stack),print('BROWSER ERROR:',error.stack,flush=True)));page.on('request',lambda request:requests.append(request.url))
  page.goto(BASE,wait_until='domcontentloaded');page.get_by_role('button',name='Satellite',exact=True).click()
  page.wait_for_function("document.querySelector('[data-imagery-level].leaflet-tile-loaded')",timeout=60000)
  toggle=page.get_by_role('button',name='Show satellite labels',exact=True)
@@ -17,13 +17,17 @@ with sync_playwright() as pw:
  for _ in range(9):
   page.get_by_role('button',name='Zoom in',exact=True).click();page.wait_for_timeout(280)
  page.wait_for_function("document.querySelector('.atlas-map').dataset.mapZoom==='22'")
- best=page.get_by_role('button',name='Best detail',exact=True);expect(best).to_be_visible(timeout=60000);best.click()
- page.wait_for_function("Number(document.querySelector('.atlas-map').dataset.mapZoom)<=20")
+ best=page.get_by_role('button',name='Best detail',exact=True);expect(best).to_be_visible(timeout=60000);page.wait_for_function("""()=>{const m=document.querySelector('.map-canvas');const box=m.getBoundingClientRect();return [...m.querySelectorAll('[data-tile-zoom="20"].leaflet-tile-loaded')].some(t=>{const r=t.getBoundingClientRect();return r.left<=box.left+box.width/2&&r.right>box.left+box.width/2&&r.top<=box.top+box.height/2&&r.bottom>box.top+box.height/2})}""")
+ expected=page.evaluate("""()=>{const m=document.querySelector('.map-canvas'),box=m.getBoundingClientRect();return Number([...m.querySelectorAll('[data-tile-zoom="20"].leaflet-tile-loaded')].find(t=>{const r=t.getBoundingClientRect();return r.left<=box.left+box.width/2&&r.right>box.left+box.width/2&&r.top<=box.top+box.height/2&&r.bottom>box.top+box.height/2}).dataset.imageryLevel)}""")
+ best.click()
+ page.wait_for_function('(expected)=>Number(document.querySelector(".atlas-map").dataset.mapZoom)===expected',arg=expected)
+ page.wait_for_function("""()=>{const m=document.querySelector('.map-canvas'),box=m.getBoundingClientRect(),z=Math.min(20,Number(document.querySelector('.atlas-map').dataset.mapZoom));const tiles=[...m.querySelectorAll(`[data-tile-zoom="${z}"]`)].filter(t=>{const r=t.getBoundingClientRect();return r.right>box.left&&r.left<box.right&&r.bottom>box.top&&r.top<box.bottom});return tiles.length>0&&tiles.every(t=>t.classList.contains('leaflet-tile-loaded'))}""",timeout=60000)
  page.screenshot(path=str(OUT/'satellite-labels-desktop.png'),full_page=True)
+ page.get_by_role('combobox',name='Search places').fill(' 7.179556 , 8.153785 ');page.get_by_role('button',name='Search',exact=True).click();dialog=page.get_by_role('dialog',name='Your private map pin');expect(dialog).to_be_visible();expect(dialog.locator('a[href^="https://www.google.com/maps/search/"]')).to_have_attribute('href',re.compile('7.179556.*8.153785'));page.keyboard.press('Escape');expect(page.locator('.map-canvas .place-marker-selected')).to_be_visible()
  page.goto(BASE+'/?lat=7.192&lng=8.132');dialog=page.get_by_role('dialog',name='Your private map pin')
  expect(dialog).to_be_visible();earth=dialog.locator('a[href^="https://earth.google.com/"]');apple=dialog.locator('a[href^="https://maps.apple.com/"]')
  assert '7.192000' in earth.get_attribute('href') and '8.132000' in apple.get_attribute('href')
- assert not any(re.match(r'https://(earth.google.com|maps.apple.com)',url) for url in requests),'External maps loaded without a click'
+ assert not any(re.match(r'https://(earth.google.com|maps.apple.com|www.google.com/maps)',url) for url in requests),'External maps loaded without a click'
  with page.expect_download() as download:dialog.get_by_role('button',name='Download pin for Google Earth Pro').click()
  data=Path(download.value.path()).read_text();tree=ET.fromstring(data);coords=tree.find('.//{http://www.opengis.net/kml/2.2}coordinates').text
  assert coords=='8.132,7.192,0',coords
