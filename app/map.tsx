@@ -19,8 +19,12 @@ export function PlaceMap({
   nearestRoad,
   liveTracking=false,
   onLocation,
+  area,
+  areaPlaces,
 }: {
   rows: RecordItem[];
+  area?:string;
+  areaPlaces?:RecordItem[];
   onSelect: (r: RecordItem) => void;
   selected?: RecordItem | null;
   route?: number[][];
@@ -58,6 +62,17 @@ export function PlaceMap({
     expandButton = useRef<HTMLButtonElement>(null),
     [ready, setReady] = useState(false),
     [tiles, setTiles] = useState(false);
+  const fitToPlaces=(records:RecordItem[])=>{
+    if(!map.current)return;
+    const points=records.filter(record=>typeof record.data.lat==="number"&&typeof record.data.lng==="number"&&Number.isFinite(record.data.lat)&&Number.isFinite(record.data.lng)).map(record=>[record.data.lat,record.data.lng]);
+    if(!points.length)return;
+    setWatching(false);
+    if(points.length===1)map.current.setView(points[0],13);
+    else map.current.fitBounds(points,{padding:[45,70],maxZoom:14,animate:false});
+  };
+  const areaRecords=(areaPlaces||rows).filter(record=>!area||record.data.lga===area);
+  const areaKey=areaRecords.map(record=>`${record.id}:${record.data.lat}:${record.data.lng}`).join("|");
+  useEffect(()=>{if(area&&ready&&!disabled)fitToPlaces(areaRecords);},[area,areaKey,ready,disabled]);
   const position = livePoint || standalonePoint;
   locationCallback.current = onLocation;
   useEffect(() => () => {requestId.current++;}, []);
@@ -332,7 +347,7 @@ export function PlaceMap({
     catch {setNotice("Select the coordinates above to copy your position.");}
   };
   return (
-    <div className={"map-wrap atlas-map" + (expanded ? " map-expanded" : "")} data-map-zoom={zoom} data-map-view={view}>
+    <div className={"map-wrap atlas-map" + (expanded ? " map-expanded" : "")} data-map-area={area||""} data-map-zoom={zoom} data-map-view={view}>
       {disabled ? (
         <div className="map-off">
           <h3>Low-data mode</h3>
@@ -351,7 +366,7 @@ export function PlaceMap({
           />
           <div className="map-label">
             <span className="live-dot" />{tiles ? position ? "Your location" : "Explore Benue" : tileError ? "Map offline" : "Loading map…"}
-            <small>{position ? `Accuracy ±${Math.round(position.accuracy)} m` : "Otukpo · Nigeria"}</small>
+            <small>{position ? `Accuracy ±${Math.round(position.accuracy)} m` : area!==undefined?`${area?area+" LGA":"Benue"} · Nigeria`:"Otukpo · Nigeria"}</small>
           </div>
           <div className="map-tools">
             <div className="map-view-switch" role="group" aria-label="Map view">
@@ -361,6 +376,7 @@ export function PlaceMap({
             <button ref={expandButton} className="map-tool-button" aria-label={expanded ? "Close expanded map" : "Expand map"} title={expanded ? "Close expanded map (Esc)" : "Expand map"} aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button>
           </div>
           <div className="map-navigation-tools">
+            {area!==undefined&&<button type="button" className="map-tool-button" aria-label="Show listed places on map" title="Show listed places on map" onClick={()=>fitToPlaces(rows)}><Layers size={18}/></button>}
             {view==="satellite" && <button type="button" className={"map-tool-button map-label-toggle"+(labels?" active":"")} aria-label="Show satellite labels" aria-pressed={labels} title={labels?"Hide road and place labels":"Show road and place labels"} onClick={()=>{setLabels(!labels);try{localStorage.setItem("benue-map-labels",labels?"0":"1");}catch{}}}><Tags size={18}/></button>}
             <button className="map-tool-button map-home" aria-label="Return to Otukpo" title="Return to Otukpo" onClick={() => {setWatching(false); map.current?.setView([7.192, 8.132], 13);}}><MapPin size={18}/></button>
           </div>

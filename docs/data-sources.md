@@ -14,7 +14,7 @@ Research:
 - https://operations.osmfoundation.org/policies/tiles/ — ordinary interactive
   tiles with attribution, normal browser caching, no downloads/prefetch.
 - https://operations.osmfoundation.org/policies/nominatim/ — no third-party
-  autocomplete. Autocomplete/filtering is restricted to our own public directory.
+  autocomplete. The app does not use Nominatim for autocomplete; local matching uses the packaged public directory and live matching uses Photon.
 - https://project-osrm.org/docs/v5.24.0/api/ — real driving routes with geometry,
   steps, distance and estimates; unavailable routing displays a useful fallback.
 - https://fixmystreet.org/how-it-works/ — review histories and followable records.
@@ -40,3 +40,24 @@ Satellite context uses the existing Esri World Imagery service with transparent 
 - OpenStreetMap/Photon may lack businesses Google lists. The app provides a town-qualified Google Maps search link for additional coverage; no Google Places API key is configured.
 
 The Otukpo town search uses an approximate town bounding box (8.02,7.10–8.30,7.35 longitude/latitude); this is not a surveyed LGA border. Other LGA names are passed as textual provider context inside the wider Benue search box.
+
+## Benue expansion — 27 October 2026
+
+The directory adds 34 populated-place references selected from the GeoNames Nigeria gazetteer, with at least one reference for each of the 23 Benue LGA filters. Imported features use country NG, administrative state 26 (Benue), populated-place feature codes, matching administrative-level-2 metadata, and the application coordinate bounds. The selection favours administrative seats, larger settlements and a short list of recognisable regional towns. It does not include private residences or infer building entrances.
+
+Source files and schema (retrieved on 27 October 2026):
+- https://download.geonames.org/export/dump/NG.zip
+- https://download.geonames.org/export/dump/admin1CodesASCII.txt
+- https://download.geonames.org/export/dump/admin2Codes.txt
+- https://download.geonames.org/export/dump/readme.txt
+
+Attribution: GeoNames.org and contributors, licensed CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ . This is a selected/normalized derivative, not an official address register or surveyed LGA boundary dataset. Each record retains its GeoNames URL, retrieval date and source modification date. Upstream admin spellings Bukuru, Markurdi and Oturkpo are normalized to Buruku, Makurdi and Otukpo in the app's existing LGA registry. Duplicate upstream Makurdi/Buruku administrative codes map to the same displayed LGA. Geographic accuracy and currency are not guaranteed by the source.
+
+Three additional public OSM references retrieved through Photon are the Benue State University Teaching Hospital, Nigeria Security and Civil Defence Corps Benue State Command, and DHL Office Makurdi. Each keeps its OSM object URL and mapped point; these are not locally verified entrances. OSM attribution/ODbL applies independently of GeoNames licensing.
+
+Institution-published address sources (no coordinates invented):
+- Joseph Sarwuan Tarka University: https://uam.edu.ng/contact-us/
+- Rev. Fr. Moses Orshio Adasu University (Benue State University aliases retained): https://bsum.edu.ng/w3/contacts.php
+- College of Education Katsina-Ala: https://portal.coekatsinaala.edu.ng/login.jsp
+
+The app does not display placeholder phone numbers from the college portal. No operating hours, current admissions, services or access promises are inferred.

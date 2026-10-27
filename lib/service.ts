@@ -1,6 +1,7 @@
 import {handleOwnerAuth,resolveOwnerSession,ownerIdentityId} from "./owner-auth";
 import {nearestRoad} from "./nearest-road";
 import {geocode} from "./geocoding";
+import {initializeSourceDirectory} from "./source-directory";
 import * as domain from "./domain";
 export type Identity = {userId:string;displayName:string;email?:string;authMethod?:"owner-password"|"platform"}|null;
 export type Stored = {id:string;kind:string;owner:string;status:string;data:string;created:string;updated:string};
@@ -53,7 +54,7 @@ async function handleRequest(req:Request,ctx:Context):Promise<Response> {
    if(Math.random()<0.02) await stmt("DELETE FROM limits WHERE id NOT LIKE ?", "%:"+Math.floor(Date.now()/60000)).run();
   }
   if(path==="seed" && req.method==="POST") {
-   await admin();const seed=ctx.seed||[];if(seed.length)await db.batch(seed.map(r=>stmt("INSERT OR IGNORE INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)",r.id,r.kind,"osm-import",r.status,JSON.stringify(r.data),now,now)));return json({imported:seed.length});
+   await admin();return json({imported:await initializeSourceDirectory(db,ctx.seed||[],now)});
   }
   if(path==="admin/overview" && req.method==="GET") {
    signed();if(!isOwner)error("Super-admin access required.",403);
@@ -68,7 +69,7 @@ async function handleRequest(req:Request,ctx:Context):Promise<Response> {
    return json({user:{id:user.userId,name:user.displayName,email:isOwner?user.email:undefined,role:isOwner?"super_admin":(ctx.adminIds.includes(user.userId)||(user.email&&ctx.adminEmails?.includes(user.email.toLowerCase())))?"admin":u.role},notifications:await all("SELECT * FROM notifications WHERE owner=? ORDER BY created DESC LIMIT 50",user.userId)});
   }
   // Initialize sourced entries for both directory and shared-link reads; existing moderation wins.
-   if(req.method==="GET"&&(path==="records"||path.startsWith("records/"))&&ctx.seed?.length&&!url.searchParams.has("mine")&&!url.searchParams.has("review"))await db.batch((ctx.seed||[]).map(r=>stmt("INSERT OR IGNORE INTO records(id,kind,owner,status,data,created,updated) VALUES(?,?,?,?,?,?,?)",r.id,r.kind,"source-import",r.status,JSON.stringify(r.data),now,now)));
+  if(req.method==="GET"&&(path==="records"||path.startsWith("records/"))&&ctx.seed?.length&&!url.searchParams.has("mine")&&!url.searchParams.has("review"))await initializeSourceDirectory(db,ctx.seed,now);
   if(path==="records" && req.method==="GET") {
    const kind=url.searchParams.get("kind")||"",mine=url.searchParams.get("mine")==="1",review=url.searchParams.get("review")==="1";
    if(mine)signed();if(review)await admin();

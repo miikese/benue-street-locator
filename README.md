@@ -18,7 +18,7 @@ PORT=3101 npm run local
 ```
 
 Open http://127.0.0.1:3101. The companion runner applies pending schema migrations
-automatically and imports two attributed OSM public map references. SQLite lives in
+automatically and imports the packaged public directory, including two original OSM map references. SQLite lives in
 ignored `.local-state/data.sqlite`; images live in `.local-state/uploads`.
 “Sign in” uses a **local development account** that is an administrator only on the
 loopback-only runner. Local sessions are HttpOnly and SameSite=Lax; they are not
@@ -144,3 +144,11 @@ The directory puts labelled area/type filters before search, provides removable 
 The mobile menu supports Escape, focus containment and focus restoration, prevents background interaction while open, and closes when resized to desktop. Larger text and theme preferences persist. Review navigation is shown to moderator roles; server authorization remains authoritative. Public business phone numbers can be called from place details. Run `python3 scripts/usability-check.py` against the loopback runner for responsive layout, menu, recovery and preference checks.
 
 Search has a visible **Search** button. Clicking it or pressing Enter keeps matching name suggestions open, including one-letter directory matches; a manual search with no local matches starts the wider-name lookup immediately. Tab navigation inside the search controls keeps suggestions visible, while leaving the control or pressing Escape dismisses them. Coordinate searches still open a map pin. Missing matches show an explicit coverage message and a town-qualified Google Maps link. This does not provide access to Google's business directory or invent unmapped places. `python3 scripts/search-button-check.py` covers the button, keyboard, provider fallback and phone layouts.
+
+## Expanded Benue directory
+
+The packaged directory contains 44 sourced records across all 23 LGA filters: 34 GeoNames town/locality reference points, the original OSM/LEEF/hospital entries, three additional public OSM records in Makurdi, and three institution-published addresses in Makurdi and Katsina-Ala. A town pin is a locality reference, not a building entrance. The institution addresses remain unpinned until coordinates are confirmed.
+
+Selecting an area frames its mapped references; **Show listed places on map** fits the current results. Source initialization reads existing IDs and inserts only missing entries in batches of at most 40. Existing edits and moderation decisions are preserved locally and on deployed databases.
+
+GeoNames data is attributed under CC BY 4.0. The deterministic offline importer, `scripts/import-benue-gazetteer.py`, accepts the downloaded Nigeria gazetteer and GeoNames administrative-code tables. See `docs/data-sources.md` for provenance, geographic limits and licensing.
