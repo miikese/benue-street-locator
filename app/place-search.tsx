@@ -39,7 +39,7 @@ export function PlaceSearch({value,onChange,onSelect,onSearch,rows,lga,category}
   const choose=(record:RecordItem)=>{chosen.current=String(record.data.name);onChange(chosen.current);setOpen(false);setActive(-1);onSelect(record);};
   return <div className="place-search">
     <form className="search-box" onSubmit={event=>{event.preventDefault();setOpen(false);setActive(-1);onSearch();}}>
-      <Search size={18}/><input aria-label="Search places" role="combobox" aria-autocomplete="list" aria-expanded={visible} aria-controls={visible?id:undefined} aria-activedescendant={visible&&active>=0&&active<suggestions.length?`${id}-${active}`:undefined} autoComplete="off" maxLength={160} value={value}
+      <Search size={18}/><input aria-label="Search places" aria-describedby={`${id}-help`} role="combobox" aria-autocomplete="list" aria-expanded={visible} aria-controls={visible?id:undefined} aria-activedescendant={visible&&active>=0&&active<suggestions.length?`${id}-${active}`:undefined} autoComplete="off" maxLength={160} value={value}
         onChange={event=>{chosen.current="";onChange(event.target.value);setActive(-1);setOpen(true);}}
         onFocus={()=>{if(value!==chosen.current)setOpen(true);}}
         onBlur={()=>{setOpen(false);setActive(-1);}}
@@ -58,6 +58,6 @@ export function PlaceSearch({value,onChange,onSelect,onSearch,rows,lga,category}
         <MapPin size={17}/><span><strong>{record.data.name}</strong><small>{record.kind==="map-result"?"Map reference · ":"Directory · "}{record.data.address||record.data.town||record.data.category}{record.data.lga?` · ${record.data.lga}`:""}</small></span><ArrowRight size={14}/>
       </li>)}
     </ul>}
-    <small className="search-guidance" role="status" aria-live="polite">{open&&looking?"Looking for more places…":open&&lookupError?lookupError:"Suggestions start with one letter. From three letters, public search text checks Photon / OpenStreetMap after a pause."}</small>
+    <small id={`${id}-help`} className="search-guidance" role="status" aria-live="polite">{open&&looking?"Looking for more places…":open&&lookupError?lookupError:open&&remote?.key===queryKey&&!suggestions.length?"No map suggestions found. Try a landmark or Google Maps below.":"Start with one letter. From 3 letters, Photon checks public search text after a pause."}</small>
   </div>;
 }
